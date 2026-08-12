@@ -1,4 +1,14 @@
+import sys
 import os
+from pathlib import Path
+
+# Dynamically locate the 'forge' root folder by finding where 'packages' resides
+CURRENT_FILE = Path(__file__).resolve()
+FORGE_ROOT = next((p for p in CURRENT_FILE.parents if (p / "packages").exists()), CURRENT_FILE.parents[3])
+
+sys.path.append(str(FORGE_ROOT / "packages" / "forge-core" / "src"))
+sys.path.append(str(FORGE_ROOT / "packages" / "forge-analyzer" / "src"))
+
 import typer
 from rich.console import Console
 from rich.table import Table
@@ -10,16 +20,14 @@ from forge_core.schemas import RepositoryData, FileNode
 from forge_analyzer.parser import CodeParser
 from forge_analyzer.dependencies import DependencyAnalyzer
 
-app = typer.Typer(help="Forge CLI: Automated Repository Intelligence & Analysis Engine")
-console = Console()
+app = typer.Typer(
+    help="Forge CLI: Automated Repository Intelligence & Analysis Engine",
+    no_args_is_help=True
+)
 
-@app.command()
-def analyze(
-    target: str = typer.Argument(..., help="Path to local folder or GitHub repository URL")
-):
-    """
-    Analyzes a repository and extracts tree structure, symbols, and dependencies.
-    """
+def run_analysis(target: str):
+    """Core scanner execution logic."""
+    console = Console()
     console.print(Panel(f"[bold cyan]Forge Engine Scanning:[/bold cyan] [yellow]{target}[/yellow]"))
 
     manager = WorkspaceManager(target)
@@ -28,12 +36,12 @@ def analyze(
         parser = CodeParser()
         
         files_data = []
-        file_tree = Tree(f"[bold blue]📂 {os.path.basename(repo_path) or repo_path}[/bold blue]")
+        file_tree = Tree(f"[bold blue]📂 {os.path.basename(os.path.abspath(repo_path))}[/bold blue]")
 
         # Scan files in repo
-        for root, _, files in os.walk(repo_path):
-            if ".git" in root or "__pycache__" in root or "node_modules" in root:
-                continue
+        for root, dirs, files in os.walk(repo_path):
+            # Exclude common meta/build folders
+            dirs[:] = [d for d in dirs if d not in {".git", "__pycache__", "node_modules", ".venv", "venv", ".idea", ".vscode"}]
                 
             for file in files:
                 full_path = os.path.join(root, file)
@@ -46,7 +54,7 @@ def analyze(
                     try:
                         with open(full_path, "r", encoding="utf-8", errors="ignore") as f:
                             symbols = parser.parse_python_file(rel_path, f.read())
-                    except Exception as e:
+                    except Exception:
                         pass
 
                 files_data.append(
@@ -60,7 +68,7 @@ def analyze(
                     )
                 )
 
-                # Add node to visual directory tree
+                # Add node to visual tree
                 file_tree.add(f"[green]{rel_path}[/green] ({len(symbols)} symbols extracted)")
 
         # Render File Hierarchy
@@ -84,6 +92,18 @@ def analyze(
         manager.cleanup()
 
     console.print("\n[bold green]✓ v0.1 Analysis Complete![/bold green]\n")
+
+@app.command(name="analyze")
+def analyze_cmd(
+    target: str = typer.Argument(..., help="Path to local folder or GitHub repository URL")
+):
+    """Analyze a local directory or remote Git repository."""
+    run_analysis(target)
+
+@app.command(name="version")
+def version_cmd():
+    """Print Forge version."""
+    Console().print("[bold cyan]Forge CLI v0.1.0[/bold cyan]")
 
 if __name__ == "__main__":
     app()
