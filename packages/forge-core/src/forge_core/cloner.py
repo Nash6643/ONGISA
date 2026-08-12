@@ -8,7 +8,7 @@ class WorkspaceManager:
         self.temp_dir = None
         self.repo_path = None
 
-    def setup_workspace(0) -> str:
+    def setup_workspace(self) -> str:
         if os.path.exists(self.target):
             self.repo_path = self.target
         else:
