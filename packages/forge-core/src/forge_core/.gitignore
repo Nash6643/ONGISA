@@ -1,0 +1,30 @@
+# Initialize Git
+git init
+
+# Set up standard Python/Node gitignore
+cat << 'EOF' > .gitignore
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+env/
+venv/
+*.egg-info/
+.pytest_cache/
+
+# JavaScript / Node
+node_modules/
+.next/
+dist/
+out/
+
+# Environments & OS
+.env
+.env.local
+.DS_Store
+*.swp
+
+# Forge Temp Files
+/tmp/
+EOF
