@@ -1,35 +1,27 @@
 import os
-from typing import Dict, List
-import google.generativeai as genai
+from google import genai
 
 class CodebaseAgent:
-    def __init__(self, api_key: str = None):
-        self.api_key = api_key or os.getenv("GEMINI_API_KEY")
-        if self.api_key:
-            genai.configure(api_key=self.api_key)
-            self.model = genai.GenerativeModel("gemini-1.5-flash")
-        else:
-            self.model = None
+    def __init__(self):
+        api_key = os.getenv("GEMINI_API_KEY")
+        if not api_key:
+            raise ValueError("GEMINI_API_KEY environment variable is missing.")
+        self.client = genai.Client(api_key=api_key)
 
-    def explain_architecture(self, file_tree_summary: str, import_graph: Dict[str, List[str]]) -> str:
-        """Generates an architectural synthesis based on static analysis data."""
-        if not self.model:
-            return "⚠️ GEMINI_API_KEY environment variable not found. Please set it to enable AI features."
-
+    def explain_architecture(self, file_tree: str, imports: dict) -> str:
         prompt = f"""
-You are Forge, an elite software architecture analyzer.
-Given the following repository structure and import graph, produce a concise architectural summary.
+Analyze the following codebase structure and import graph:
 
-FILE HIERARCHY:
-{file_tree_summary}
+### File Tree
+{file_tree}
 
-MODULE IMPORTS:
-{import_graph}
+### Imports
+{imports}
 
-Provide:
-1. Core Architecture Pattern (e.g., Monorepo, Microservice, MVC)
-2. Primary Component Roles
-3. High-level Data Flow
+Provide a concise high-level architectural overview.
 """
-        response = self.model.generate_content(prompt)
+        response = self.client.models.generate_content(
+            model="gemini-2.5-flash",
+            contents=prompt,
+        )
         return response.text
