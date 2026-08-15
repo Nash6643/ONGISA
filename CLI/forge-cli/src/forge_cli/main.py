@@ -18,7 +18,7 @@ from rich.prompt import Prompt
 
 from forge_core.cloner import WorkspaceManager
 from forge_core.schemas import FileNode
-from forge_analyzer import CodeParser, DependencyGraph, DependencyAnalyzer
+from forge_analyzer import CodeParser, DependencyGraph, DependencyAnalyzer, MultiLangParser
 from forge_ai import CodebaseAgent, CodebaseVectorIndex
 
 # Mapping file extensions to language names
@@ -61,12 +61,25 @@ def render_terminal_dependency_graph(console: Console, dep_graph: DependencyGrap
     console.print(Panel(graph_tree, title="[bold white]Codebase Dependency Graph[/bold white]", border_style="cyan"))
 
 
-def _parse_file_content(parser: CodeParser, file_path: str, content: str, ext: str):
+def _parse_file_content(ts_parser: MultiLangParser, fallback_parser: CodeParser, file_path: str, content: str, ext: str):
     symbols = []
     imports = []
+    
+    # Use Tree-Sitter if language is supported
+    if ext in TREESITTER_LANG_MAP:
+        try:
+            parsed = ts_parser.parse_code(content, TREESITTER_LANG_MAP[ext])
+            symbols = parsed.get("symbols", [])
+            imports = parsed.get("imports", [])
+            return symbols, imports
+        except Exception:
+            pass
+
+    # Fallback to python stdlib parser if Python file
     if ext == ".py":
-        symbols = parser.parse_python_symbols(content)
-        imports = parser.parse_python_imports(content)
+        symbols = fallback_parser.parse_python_symbols(content)
+        imports = fallback_parser.parse_python_imports(content)
+
     return symbols, imports
 
 
