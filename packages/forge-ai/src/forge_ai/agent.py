@@ -30,23 +30,27 @@ Provide a concise high-level architectural overview covering:
         )
         return response.text
 
-    def start_chat_session(self, file_tree: str, imports: dict):
-        system_instruction = f"""
-You are Forge AI, an expert software architecture assistant.
-You have indexed the user's codebase with the following details:
-
-### File Tree
-{file_tree}
-
-### Import Graph
-{imports}
-
-Answer developer questions specifically using this context. Be concise, precise, and practical.
-"""
-        return self.client.chats.create(
-            model="gemini-2.5-flash",
-            config=types.GenerateContentConfig(
-                system_instruction=system_instruction,
-                temperature=0.2,
-            ),
+    def answer_with_rag(self, query: str, relevant_chunks: list) -> str:
+        """Answer user questions grounded in retrieved code snippets."""
+        context = "\n\n".join(
+            f"--- File: {c['file_path']} (Lines {c['start_line']}-{c['end_line']}) ---\n{c['content']}"
+            for c in relevant_chunks
         )
+
+        prompt = f"""
+You are Forge AI, an expert software architecture assistant.
+Answer the developer's question using the relevant codebase snippets below:
+
+### Relevant Code Context
+{context}
+
+### Question
+{query}
+
+Provide a precise, concise, and practical explanation.
+"""
+        response = self.client.models.generate_content(
+            model="gemini-2.5-flash",
+            contents=prompt,
+        )
+        return response.text

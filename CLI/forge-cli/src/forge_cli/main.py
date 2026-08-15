@@ -17,6 +17,8 @@ from rich.table import Table
 from rich.panel import Panel
 from rich.tree import Tree
 from rich.prompt import Prompt
+from forge_ai import CodebaseAgent, CodebaseVectorIndex
+from forge_core.cloner import WorkspaceManager
 
 from forge_core.cloner import WorkspaceManager
 from forge_core.schemas import RepositoryData, FileNode, SymbolNode, ImportNode
@@ -204,55 +206,69 @@ def explain_cmd(
 
 @app.command(name="chat")
 def chat_cmd(
-    target: str = typer.Argument(".", help="Path to local folder or GitHub repository URL")
+    target: str = typer.Argument(".", help="Path to local codebase folder or GitHub repository URL")
 ):
-    """Start an interactive AI chat session anchored to the codebase context."""
+    """Start an interactive RAG-powered chat session with your codebase."""
     console = Console()
-    console.print(Panel("[bold cyan]Forge AI Chat:[/bold cyan] Indexing repository context..."))
+    console.print(Panel(f"[bold cyan]Forge AI RAG Session Initializing:[/bold cyan] [yellow]{target}[/yellow]"))
 
     manager = WorkspaceManager(target)
-    dep_graph = DependencyGraph()
-
+    
     try:
         repo_path = manager.setup_workspace()
-        parser = CodeParser()
-        tree_summary = []
+        
+        # Read codebase files for indexing
+        console.print("[dim]Reading source files...[/dim]")
+        file_contents = {}
+        valid_extensions = {".py", ".rs", ".js", ".ts", ".tsx", ".java", ".go", ".c", ".cpp", ".h", ".json", ".md"}
 
         for root, dirs, files in os.walk(repo_path):
-            dirs[:] = [d for d in dirs if d not in {".git", "__pycache__", "node_modules", ".venv", "venv", ".idea", ".vscode"}]
+            dirs[:] = [d for d in dirs if d not in {".git", "__pycache__", "node_modules", ".venv", "venv", "dist", "build"}]
             for file in files:
-                full_path = os.path.join(root, file)
-                rel_path = os.path.relpath(full_path, repo_path)
                 ext = os.path.splitext(file)[1].lower()
-
-                if ext in LANGUAGE_MAP:
+                if ext in valid_extensions:
+                    full_path = os.path.join(root, file)
+                    rel_path = os.path.relpath(full_path, repo_path)
                     try:
                         with open(full_path, "r", encoding="utf-8", errors="ignore") as f:
                             content = f.read()
-                            _, file_imports = _parse_file_content(parser, rel_path, content, ext)
-                            for imp in file_imports:
-                                dep_graph.add_import(rel_path, imp)
+                            if content.strip():
+                                file_contents[rel_path] = content
                     except Exception:
                         pass
 
-                tree_summary.append(rel_path)
+        if not file_contents:
+            console.print("[bold red]No readable source files found in target repository.[/bold red]")
+            return
+
+        # Build vector index
+        console.print(f"[dim]Indexing {len(file_contents)} files into local ChromaDB vector store...[/dim]")
+        index = CodebaseVectorIndex()
+        index.index_files(file_contents)
+        console.print("[bold green]✓ RAG Vector Index Ready![/bold green]\n")
 
         agent = CodebaseAgent()
-        chat = agent.start_chat_session("\n".join(tree_summary), dep_graph.imports)
 
-        console.print("[bold green]Context loaded![/bold green] Type [yellow]exit[/yellow] or [yellow]quit[/yellow] to end session.\n")
-
+        # Interactive Chat Loop
+        console.print("[bold cyan]Ask Forge AI any question about this codebase (type 'exit' or 'quit' to end):[/bold cyan]\n")
         while True:
-            user_input = Prompt.ask("[bold magenta]forge-ai>[/bold magenta]").strip()
-            if not user_input:
-                continue
-            if user_input.lower() in {"exit", "quit"}:
-                console.print("[bold yellow]Ending session. Bye![/bold yellow]")
+            query = Prompt.ask("[bold green]Developer[/bold green]")
+            if query.strip().lower() in {"exit", "quit"}:
+                console.print("[yellow]Ending chat session. Goodbye![/yellow]")
                 break
+            
+            if not query.strip():
+                continue
 
-            response = chat.send_message(user_input)
-            console.print(Panel(response.text, title="Forge AI", border_style="cyan"))
+            with console.status("[bold cyan]Searching code & generating response...[/bold cyan]"):
+                relevant_chunks = index.search(query, top_k=3)
+                response = agent.answer_with_rag(query, relevant_chunks)
 
+            console.print(Panel(response, title="[bold magenta]Forge AI[/bold magenta]", border_style="magenta"))
+            console.print()
+
+    except Exception as e:
+        console.print(f"[bold red]Error in chat session:[/bold red] {e}")
     finally:
         manager.cleanup()
 
