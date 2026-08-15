@@ -1,22 +1,49 @@
+import json
 from typing import Dict, List, Set
-from pydantic import BaseModel, Field
 
-class SymbolNode(BaseModel):
-    id: str  # e.g. "forge_core.cloner.WorkspaceManager"
-    file_path: str
-    symbol_name: str
-    kind: str
-    calls: Set[str] = Field(default_factory=set)
+class DependencyGraph:
+    def __init__(self):
+        # file_path -> set of imported modules/files
+        self.imports: Dict[str, Set[str]] = {}
 
-class DependencyGraph(BaseModel):
-    nodes: Dict[str, SymbolNode] = Field(default_factory=dict)
-    imports: Dict[str, List[str]] = Field(default_factory=dict)  # file_path -> list of imported modules
+    def add_import(self, source_file: str, target_module: str):
+        if source_file not in self.imports:
+            self.imports[source_file] = set()
+        self.imports[source_file].add(target_module)
 
-    def add_import(self, file_path: str, imported_module: str):
-        if file_path not in self.imports:
-            self.imports[file_path] = []
-        if imported_module not in self.imports[file_path]:
-            self.imports[file_path].append(imported_module)
+    def to_dict(self) -> Dict:
+        """Export internal graph data to node-link JSON payload structure."""
+        nodes = []
+        links = []
+        node_set: Set[str] = set()
 
-    def add_symbol(self, symbol_node: SymbolNode):
-        self.nodes[symbol_node.id] = symbol_node
+        for source, targets in self.imports.items():
+            node_set.add(source)
+            for target in targets:
+                node_set.add(target)
+                links.append({
+                    "source": source,
+                    "target": target
+                })
+
+        for node in sorted(node_set):
+            # Determine degree metrics
+            out_degree = len(self.imports.get(node, []))
+            in_degree = sum(1 for targets in self.imports.values() if node in targets)
+            
+            nodes.append({
+                "id": node,
+                "label": node.split("/")[-1],
+                "in_degree": in_degree,
+                "out_degree": out_degree,
+                "is_internal": node in self.imports
+            })
+
+        return {
+            "nodes": nodes,
+            "edges": links
+        }
+
+    def to_json(self, indent: int = 2) -> str:
+        """Serialize graph to a JSON string."""
+        return json.dumps(self.to_dict(), indent=indent)

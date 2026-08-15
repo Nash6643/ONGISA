@@ -58,7 +58,7 @@ def _parse_file_content(
         return parser.parse_rust_file(rel_path, content)
     return [], []
 
-def run_analysis(target: str):
+def run_analysis(target: str, export_graph_path: Optional[str] = None):
     """Core scanner execution logic."""
     console = Console()
     console.print(Panel(f"[bold cyan]Forge Engine Scanning:[/bold cyan] [yellow]{target}[/yellow]"))
@@ -89,7 +89,8 @@ def run_analysis(target: str):
                             content = f.read()
                             symbols, file_imports = _parse_file_content(parser, rel_path, content, ext)
                             for imp in file_imports:
-                                dep_graph.add_import(rel_path, imp)
+                                # Standardize import target string
+                                dep_graph.add_import(rel_path, imp.module)
                     except Exception:
                         pass
 
@@ -116,9 +117,16 @@ def run_analysis(target: str):
             import_table.add_column("Imports")
 
             for file_path, imports in dep_graph.imports.items():
-                import_table.add_row(file_path, ", ".join(imports[:3]) + ("..." if len(imports) > 3 else ""))
+                import_table.add_row(file_path, ", ".join(list(imports)[:3]) + ("..." if len(imports) > 3 else ""))
 
             console.print(import_table)
+
+        # Export graph JSON if flag is set
+        if export_graph_path:
+            graph_data = dep_graph.to_json()
+            with open(export_graph_path, "w", encoding="utf-8") as f:
+                f.write(graph_data)
+            console.print(f"\n[bold green]✓ Exported dependency graph to:[/bold green] [yellow]{export_graph_path}[/yellow]")
 
         deps = DependencyAnalyzer.extract_python_dependencies(repo_path)
         if deps:
@@ -139,10 +147,16 @@ def run_analysis(target: str):
 
 @app.command(name="analyze")
 def analyze_cmd(
-    target: str = typer.Argument(..., help="Path to local folder or GitHub repository URL")
+    target: str = typer.Argument(..., help="Path to local folder or GitHub repository URL"),
+    export_graph: Optional[str] = typer.Option(
+        None, 
+        "--export-graph", 
+        "-g", 
+        help="Path to export JSON dependency graph file (e.g. graph.json)"
+    )
 ):
     """Analyze a local directory or remote Git repository."""
-    run_analysis(target)
+    run_analysis(target, export_graph)
 
 @app.command(name="explain")
 def explain_cmd(
