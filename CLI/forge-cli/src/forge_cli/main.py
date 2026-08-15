@@ -8,6 +8,7 @@ FORGE_ROOT = next((p for p in CURRENT_FILE.parents if (p / "packages").exists())
 
 sys.path.append(str(FORGE_ROOT / "packages" / "forge-core" / "src"))
 sys.path.append(str(FORGE_ROOT / "packages" / "forge-analyzer" / "src"))
+sys.path.append(str(FORGE_ROOT / "packages" / "forge-ai" / "src"))
 
 import typer
 from rich.console import Console
@@ -20,6 +21,7 @@ from forge_core.schemas import RepositoryData, FileNode
 from forge_analyzer.parser import CodeParser
 from forge_analyzer.dependencies import DependencyAnalyzer
 from forge_analyzer.graph import DependencyGraph
+from forge_ai.agent import CodebaseAgent
 
 app = typer.Typer(
     help="Forge CLI: Automated Repository Intelligence & Analysis Engine",
@@ -118,10 +120,50 @@ def analyze_cmd(
     """Analyze a local directory or remote Git repository."""
     run_analysis(target)
 
+@app.command(name="explain")
+def explain_cmd(
+    target: str = typer.Argument(..., help="Path to local folder or GitHub repository URL")
+):
+    """Generates an AI-powered architectural summary of the codebase."""
+    console = Console()
+    console.print(Panel(f"[bold cyan]Forge AI Engine Analyzing:[/bold cyan] [yellow]{target}[/yellow]"))
+
+    manager = WorkspaceManager(target)
+    dep_graph = DependencyGraph()
+
+    try:
+        repo_path = manager.setup_workspace()
+        parser = CodeParser()
+        tree_summary = []
+
+        for root, dirs, files in os.walk(repo_path):
+            dirs[:] = [d for d in dirs if d not in {".git", "__pycache__", "node_modules", ".venv", "venv", ".idea", ".vscode"}]
+            for file in files:
+                full_path = os.path.join(root, file)
+                rel_path = os.path.relpath(full_path, repo_path)
+                if file.endswith(".py"):
+                    try:
+                        with open(full_path, "r", encoding="utf-8", errors="ignore") as f:
+                            _, file_imports = parser.parse_python_file(rel_path, f.read())
+                            for imp in file_imports:
+                                dep_graph.add_import(rel_path, imp)
+                    except Exception:
+                        pass
+                tree_summary.append(rel_path)
+
+        agent = CodebaseAgent()
+        summary = agent.explain_architecture("\n".join(tree_summary), dep_graph.imports)
+        
+        console.print("\n[bold green]Architectural Analysis:[/bold green]")
+        console.print(Panel(summary))
+
+    finally:
+        manager.cleanup()
+
 @app.command(name="version")
 def version_cmd():
     """Print Forge version."""
-    Console().print("[bold cyan]Forge CLI v0.2.0[/bold cyan]")
+    Console().print("[bold cyan]Forge CLI v0.3.0[/bold cyan]")
 
 if __name__ == "__main__":
     app()
