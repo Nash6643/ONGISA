@@ -19,6 +19,7 @@ from forge_core.cloner import WorkspaceManager
 from forge_core.schemas import RepositoryData, FileNode
 from forge_analyzer.parser import CodeParser
 from forge_analyzer.dependencies import DependencyAnalyzer
+from forge_analyzer.graph import DependencyGraph
 
 app = typer.Typer(
     help="Forge CLI: Automated Repository Intelligence & Analysis Engine",
@@ -31,6 +32,8 @@ def run_analysis(target: str):
     console.print(Panel(f"[bold cyan]Forge Engine Scanning:[/bold cyan] [yellow]{target}[/yellow]"))
 
     manager = WorkspaceManager(target)
+    dep_graph = DependencyGraph()
+
     try:
         repo_path = manager.setup_workspace()
         parser = CodeParser()
@@ -48,12 +51,15 @@ def run_analysis(target: str):
                 rel_path = os.path.relpath(full_path, repo_path)
                 ext = os.path.splitext(file)[1]
                 symbols = []
+                file_imports = []
 
                 # Parse Python files with Tree-Sitter
                 if ext == ".py":
                     try:
                         with open(full_path, "r", encoding="utf-8", errors="ignore") as f:
-                            symbols = parser.parse_python_file(rel_path, f.read())
+                            symbols, file_imports = parser.parse_python_file(rel_path, f.read())
+                            for imp in file_imports:
+                                dep_graph.add_import(rel_path, imp)
                     except Exception:
                         pass
 
@@ -69,11 +75,23 @@ def run_analysis(target: str):
                 )
 
                 # Add node to visual tree
-                file_tree.add(f"[green]{rel_path}[/green] ({len(symbols)} symbols extracted)")
+                file_tree.add(f"[green]{rel_path}[/green] ({len(symbols)} symbols, {len(file_imports)} imports extracted)")
 
         # Render File Hierarchy
         console.print("\n[bold]Repository File Structure & Symbol Summary:[/bold]")
         console.print(file_tree)
+
+        # Render Module Import Graph Summary
+        if dep_graph.imports:
+            console.print("\n[bold]Internal & External Module Import Graph:[/bold]")
+            import_table = Table(show_header=True, header_style="bold cyan")
+            import_table.add_column("File")
+            import_table.add_column("Imports")
+
+            for file_path, imports in dep_graph.imports.items():
+                import_table.add_row(file_path, ", ".join(imports[:3]) + ("..." if len(imports) > 3 else ""))
+
+            console.print(import_table)
 
         # Extract Dependencies
         deps = DependencyAnalyzer.extract_python_dependencies(repo_path)
@@ -91,7 +109,7 @@ def run_analysis(target: str):
     finally:
         manager.cleanup()
 
-    console.print("\n[bold green]✓ v0.1 Analysis Complete![/bold green]\n")
+    console.print("\n[bold green]✓ v0.2 Graph Analysis Complete![/bold green]\n")
 
 @app.command(name="analyze")
 def analyze_cmd(
@@ -103,7 +121,7 @@ def analyze_cmd(
 @app.command(name="version")
 def version_cmd():
     """Print Forge version."""
-    Console().print("[bold cyan]Forge CLI v0.1.0[/bold cyan]")
+    Console().print("[bold cyan]Forge CLI v0.2.0[/bold cyan]")
 
 if __name__ == "__main__":
     app()
