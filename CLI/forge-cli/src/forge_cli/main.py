@@ -1,67 +1,77 @@
 import sys
-import os
 from pathlib import Path
-from typing import List, Tuple, Optional
 
-# Set up package import paths
-CURRENT_FILE = Path(__file__).resolve()
-FORGE_ROOT = next((p for p in CURRENT_FILE.parents if (p / "packages").exists()), CURRENT_FILE.parents[3])
+# Force Python to prefer local src folders over pip-cached site-packages
+BASE_DIR = Path(__file__).resolve().parent.parent.parent.parent
+sys.path.insert(0, str(BASE_DIR / "packages" / "forge-analyzer" / "src"))
+sys.path.insert(0, str(BASE_DIR / "packages" / "forge-core" / "src"))
+sys.path.insert(0, str(BASE_DIR / "packages" / "forge-ai" / "src"))
 
-sys.path.append(str(FORGE_ROOT / "packages" / "forge-core" / "src"))
-sys.path.append(str(FORGE_ROOT / "packages" / "forge-analyzer" / "src"))
-sys.path.append(str(FORGE_ROOT / "packages" / "forge-ai" / "src"))
-
+import os
 import typer
+from typing import Optional
 from rich.console import Console
-from rich.table import Table
 from rich.panel import Panel
 from rich.tree import Tree
+from rich.table import Table
 from rich.prompt import Prompt
+
+from forge_core.cloner import WorkspaceManager
+from forge_core.schemas import FileNode
+from forge_analyzer import CodeParser, DependencyGraph, DependencyAnalyzer
 from forge_ai import CodebaseAgent, CodebaseVectorIndex
-from forge_core.cloner import WorkspaceManager
 
-from forge_core.cloner import WorkspaceManager
-from forge_core.schemas import RepositoryData, FileNode, SymbolNode, ImportNode
-from forge_analyzer.parser import SymbolNode, ImportNode
-from forge_analyzer.parser import CodeParser
-from forge_analyzer.dependencies import DependencyAnalyzer
-from forge_analyzer.graph import DependencyGraph
-from forge_ai.agent import CodebaseAgent
-
-app = typer.Typer(
-    help="Forge CLI: Automated Repository Intelligence & Analysis Engine",
-    no_args_is_help=True
-)
-
+# Mapping file extensions to language names
 LANGUAGE_MAP = {
     ".py": "Python",
-    ".ts": "TypeScript",
-    ".tsx": "TypeScript (TSX)",
-    ".js": "JavaScript",
-    ".jsx": "JavaScript (JSX)",
     ".rs": "Rust",
+    ".js": "JavaScript",
+    ".ts": "TypeScript",
+    ".tsx": "TypeScript (React)",
+    ".java": "Java",
+    ".go": "Go",
+    ".c": "C",
+    ".cpp": "C++",
+    ".h": "Header",
+    ".json": "JSON",
+    ".md": "Markdown"
 }
 
-def _parse_file_content(
-    parser: CodeParser, 
-    rel_path: str, 
-    content: str, 
-    ext: str
-) -> Tuple[List[SymbolNode], List[ImportNode]]:
-    """Helper dispatcher to route file content to the corresponding CodeParser method."""
-    ext = ext.lower()
+app = typer.Typer(help="Forge CLI - Autonomous AI Software Architecture Engine")
+
+
+def render_terminal_dependency_graph(console: Console, dep_graph: DependencyGraph):
+    """Render a visual ASCII / Rich tree graph of module dependency connections."""
+    if not dep_graph.imports:
+        return
+
+    graph_tree = Tree("[bold cyan]🌐 Dependency & Import Topology Map[/bold cyan]")
+    
+    for source_file, targets in dep_graph.imports.items():
+        # Source node branch
+        source_branch = graph_tree.add(f"[bold yellow]📄 {source_file}[/bold yellow]")
+        
+        for target in sorted(targets):
+            # Differentiate local path imports vs external modules
+            if target.startswith(".") or "/" in target or target.startswith("forge_"):
+                source_branch.add(f"└── [green]🔗 {target}[/green] [dim](internal)[/dim]")
+            else:
+                source_branch.add(f"└── [magenta]📦 {target}[/magenta] [dim](external/lib)[/dim]")
+
+    console.print(Panel(graph_tree, title="[bold white]Codebase Dependency Graph[/bold white]", border_style="cyan"))
+
+
+def _parse_file_content(parser: CodeParser, file_path: str, content: str, ext: str):
+    symbols = []
+    imports = []
     if ext == ".py":
-        return parser.parse_python_file(rel_path, content)
-    elif ext in [".ts", ".js"]:
-        return parser.parse_typescript_file(rel_path, content, is_tsx=False)
-    elif ext in [".tsx", ".jsx"]:
-        return parser.parse_typescript_file(rel_path, content, is_tsx=True)
-    elif ext == ".rs":
-        return parser.parse_rust_file(rel_path, content)
-    return [], []
+        symbols = parser.parse_python_symbols(content)
+        imports = parser.parse_python_imports(content)
+    return symbols, imports
+
 
 def run_analysis(target: str, export_graph_path: Optional[str] = None):
-    """Core scanner execution logic."""
+    """Core scanner execution logic with Rich terminal visual rendering."""
     console = Console()
     console.print(Panel(f"[bold cyan]Forge Engine Scanning:[/bold cyan] [yellow]{target}[/yellow]"))
 
@@ -91,7 +101,6 @@ def run_analysis(target: str, export_graph_path: Optional[str] = None):
                             content = f.read()
                             symbols, file_imports = _parse_file_content(parser, rel_path, content, ext)
                             for imp in file_imports:
-                                # Standardize import target string
                                 dep_graph.add_import(rel_path, imp.module)
                     except Exception:
                         pass
@@ -107,32 +116,25 @@ def run_analysis(target: str, export_graph_path: Optional[str] = None):
                     )
                 )
 
-                file_tree.add(f"[green]{rel_path}[/green] ({len(symbols)} symbols, {len(file_imports)} imports extracted)")
+                file_tree.add(f"[green]{rel_path}[/green] ({len(symbols)} symbols, {len(file_imports)} imports)")
 
-        console.print("\n[bold]Repository File Structure & Symbol Summary:[/bold]")
+        console.print("\n[bold]Repository Directory Structure:[/bold]")
         console.print(file_tree)
 
-        if dep_graph.imports:
-            console.print("\n[bold]Internal & External Module Import Graph:[/bold]")
-            import_table = Table(show_header=True, header_style="bold cyan")
-            import_table.add_column("File")
-            import_table.add_column("Imports")
+        # Render Visual Terminal Dependency Graph
+        console.print()
+        render_terminal_dependency_graph(console, dep_graph)
 
-            for file_path, imports in dep_graph.imports.items():
-                import_table.add_row(file_path, ", ".join(list(imports)[:3]) + ("..." if len(imports) > 3 else ""))
-
-            console.print(import_table)
-
-        # Export graph JSON if flag is set
+        # Export JSON graph if flag is active
         if export_graph_path:
             graph_data = dep_graph.to_json()
             with open(export_graph_path, "w", encoding="utf-8") as f:
                 f.write(graph_data)
-            console.print(f"\n[bold green]✓ Exported dependency graph to:[/bold green] [yellow]{export_graph_path}[/yellow]")
+            console.print(f"\n[bold green]✓ Exported dependency graph payload to:[/bold green] [yellow]{export_graph_path}[/yellow]")
 
         deps = DependencyAnalyzer.extract_python_dependencies(repo_path)
         if deps:
-            console.print("\n[bold]Dependencies Detected:[/bold]")
+            console.print("\n[bold]Detected Package Dependencies:[/bold]")
             dep_table = Table(show_header=True, header_style="bold magenta")
             dep_table.add_column("Package")
             dep_table.add_column("Version")
@@ -147,62 +149,15 @@ def run_analysis(target: str, export_graph_path: Optional[str] = None):
 
     console.print("\n[bold green]✓ Multi-Language Graph Analysis Complete![/bold green]\n")
 
+
 @app.command(name="analyze")
 def analyze_cmd(
-    target: str = typer.Argument(..., help="Path to local folder or GitHub repository URL"),
-    export_graph: Optional[str] = typer.Option(
-        None, 
-        "--export-graph", 
-        "-g", 
-        help="Path to export JSON dependency graph file (e.g. graph.json)"
-    )
+    target: str = typer.Argument(".", help="Path to local codebase folder or GitHub repository URL"),
+    export_graph: Optional[str] = typer.Option(None, "--export-graph", help="Path to export dependency graph JSON")
 ):
-    """Analyze a local directory or remote Git repository."""
+    """Analyze a codebase structure, symbols, dependencies, and import topology."""
     run_analysis(target, export_graph)
 
-@app.command(name="explain")
-def explain_cmd(
-    target: str = typer.Argument(..., help="Path to local folder or GitHub repository URL")
-):
-    """Generates an AI-powered architectural summary of the codebase."""
-    console = Console()
-    console.print(Panel(f"[bold cyan]Forge AI Engine Analyzing:[/bold cyan] [yellow]{target}[/yellow]"))
-
-    manager = WorkspaceManager(target)
-    dep_graph = DependencyGraph()
-
-    try:
-        repo_path = manager.setup_workspace()
-        parser = CodeParser()
-        tree_summary = []
-
-        for root, dirs, files in os.walk(repo_path):
-            dirs[:] = [d for d in dirs if d not in {".git", "__pycache__", "node_modules", ".venv", "venv", ".idea", ".vscode"}]
-            for file in files:
-                full_path = os.path.join(root, file)
-                rel_path = os.path.relpath(full_path, repo_path)
-                ext = os.path.splitext(file)[1].lower()
-
-                if ext in LANGUAGE_MAP:
-                    try:
-                        with open(full_path, "r", encoding="utf-8", errors="ignore") as f:
-                            content = f.read()
-                            _, file_imports = _parse_file_content(parser, rel_path, content, ext)
-                            for imp in file_imports:
-                                dep_graph.add_import(rel_path, imp)
-                    except Exception:
-                        pass
-
-                tree_summary.append(rel_path)
-
-        agent = CodebaseAgent()
-        summary = agent.explain_architecture("\n".join(tree_summary), dep_graph.imports)
-        
-        console.print("\n[bold green]Architectural Analysis:[/bold green]")
-        console.print(Panel(summary))
-
-    finally:
-        manager.cleanup()
 
 @app.command(name="chat")
 def chat_cmd(
@@ -220,7 +175,7 @@ def chat_cmd(
         # Read codebase files for indexing
         console.print("[dim]Reading source files...[/dim]")
         file_contents = {}
-        valid_extensions = {".py", ".rs", ".js", ".ts", ".tsx", ".java", ".go", ".c", ".cpp", ".h", ".json", ".md"}
+        valid_extensions = set(LANGUAGE_MAP.keys())
 
         for root, dirs, files in os.walk(repo_path):
             dirs[:] = [d for d in dirs if d not in {".git", "__pycache__", "node_modules", ".venv", "venv", "dist", "build"}]
@@ -242,7 +197,7 @@ def chat_cmd(
             return
 
         # Build vector index
-        console.print(f"[dim]Indexing {len(file_contents)} files into local ChromaDB vector store...[/dim]")
+        console.print(f"[dim]Indexing {len(file_contents)} files into local vector store...[/dim]")
         index = CodebaseVectorIndex()
         index.index_files(file_contents)
         console.print("[bold green]✓ RAG Vector Index Ready![/bold green]\n")
@@ -272,10 +227,6 @@ def chat_cmd(
     finally:
         manager.cleanup()
 
-@app.command(name="version")
-def version_cmd():
-    """Print Forge version."""
-    Console().print("[bold cyan]Forge CLI v0.4.0[/bold cyan]")
 
 if __name__ == "__main__":
     app()
