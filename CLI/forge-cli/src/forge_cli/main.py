@@ -1,6 +1,7 @@
 import sys
 import os
 from pathlib import Path
+from typing import List, Tuple, Optional
 
 # Set up package import paths
 CURRENT_FILE = Path(__file__).resolve()
@@ -18,7 +19,8 @@ from rich.tree import Tree
 from rich.prompt import Prompt
 
 from forge_core.cloner import WorkspaceManager
-from forge_core.schemas import RepositoryData, FileNode
+from forge_core.schemas import RepositoryData, FileNode, SymbolNode, ImportNode
+from forge_analyzer.parser import SymbolNode, ImportNode
 from forge_analyzer.parser import CodeParser
 from forge_analyzer.dependencies import DependencyAnalyzer
 from forge_analyzer.graph import DependencyGraph
@@ -28,6 +30,33 @@ app = typer.Typer(
     help="Forge CLI: Automated Repository Intelligence & Analysis Engine",
     no_args_is_help=True
 )
+
+LANGUAGE_MAP = {
+    ".py": "Python",
+    ".ts": "TypeScript",
+    ".tsx": "TypeScript (TSX)",
+    ".js": "JavaScript",
+    ".jsx": "JavaScript (JSX)",
+    ".rs": "Rust",
+}
+
+def _parse_file_content(
+    parser: CodeParser, 
+    rel_path: str, 
+    content: str, 
+    ext: str
+) -> Tuple[List[SymbolNode], List[ImportNode]]:
+    """Helper dispatcher to route file content to the corresponding CodeParser method."""
+    ext = ext.lower()
+    if ext == ".py":
+        return parser.parse_python_file(rel_path, content)
+    elif ext in [".ts", ".js"]:
+        return parser.parse_typescript_file(rel_path, content, is_tsx=False)
+    elif ext in [".tsx", ".jsx"]:
+        return parser.parse_typescript_file(rel_path, content, is_tsx=True)
+    elif ext == ".rs":
+        return parser.parse_rust_file(rel_path, content)
+    return [], []
 
 def run_analysis(target: str):
     """Core scanner execution logic."""
@@ -50,14 +79,15 @@ def run_analysis(target: str):
             for file in files:
                 full_path = os.path.join(root, file)
                 rel_path = os.path.relpath(full_path, repo_path)
-                ext = os.path.splitext(file)[1]
+                ext = os.path.splitext(file)[1].lower()
                 symbols = []
                 file_imports = []
 
-                if ext == ".py":
+                if ext in LANGUAGE_MAP:
                     try:
                         with open(full_path, "r", encoding="utf-8", errors="ignore") as f:
-                            symbols, file_imports = parser.parse_python_file(rel_path, f.read())
+                            content = f.read()
+                            symbols, file_imports = _parse_file_content(parser, rel_path, content, ext)
                             for imp in file_imports:
                                 dep_graph.add_import(rel_path, imp)
                     except Exception:
@@ -69,7 +99,7 @@ def run_analysis(target: str):
                         name=file,
                         extension=ext,
                         size_bytes=os.path.getsize(full_path),
-                        language="Python" if ext == ".py" else "Other",
+                        language=LANGUAGE_MAP.get(ext, "Other"),
                         symbols=symbols
                     )
                 )
@@ -105,7 +135,7 @@ def run_analysis(target: str):
     finally:
         manager.cleanup()
 
-    console.print("\n[bold green]✓ v0.2 Graph Analysis Complete![/bold green]\n")
+    console.print("\n[bold green]✓ Multi-Language Graph Analysis Complete![/bold green]\n")
 
 @app.command(name="analyze")
 def analyze_cmd(
@@ -135,14 +165,18 @@ def explain_cmd(
             for file in files:
                 full_path = os.path.join(root, file)
                 rel_path = os.path.relpath(full_path, repo_path)
-                if file.endswith(".py"):
+                ext = os.path.splitext(file)[1].lower()
+
+                if ext in LANGUAGE_MAP:
                     try:
                         with open(full_path, "r", encoding="utf-8", errors="ignore") as f:
-                            _, file_imports = parser.parse_python_file(rel_path, f.read())
+                            content = f.read()
+                            _, file_imports = _parse_file_content(parser, rel_path, content, ext)
                             for imp in file_imports:
                                 dep_graph.add_import(rel_path, imp)
                     except Exception:
                         pass
+
                 tree_summary.append(rel_path)
 
         agent = CodebaseAgent()
@@ -175,14 +209,18 @@ def chat_cmd(
             for file in files:
                 full_path = os.path.join(root, file)
                 rel_path = os.path.relpath(full_path, repo_path)
-                if file.endswith(".py"):
+                ext = os.path.splitext(file)[1].lower()
+
+                if ext in LANGUAGE_MAP:
                     try:
                         with open(full_path, "r", encoding="utf-8", errors="ignore") as f:
-                            _, file_imports = parser.parse_python_file(rel_path, f.read())
+                            content = f.read()
+                            _, file_imports = _parse_file_content(parser, rel_path, content, ext)
                             for imp in file_imports:
                                 dep_graph.add_import(rel_path, imp)
                     except Exception:
                         pass
+
                 tree_summary.append(rel_path)
 
         agent = CodebaseAgent()
