@@ -2,7 +2,7 @@ import sys
 import os
 from pathlib import Path
 
-# Dynamically locate the 'forge' root folder by finding where 'packages' resides
+# Set up package import paths
 CURRENT_FILE = Path(__file__).resolve()
 FORGE_ROOT = next((p for p in CURRENT_FILE.parents if (p / "packages").exists()), CURRENT_FILE.parents[3])
 
@@ -15,6 +15,7 @@ from rich.console import Console
 from rich.table import Table
 from rich.panel import Panel
 from rich.tree import Tree
+from rich.prompt import Prompt
 
 from forge_core.cloner import WorkspaceManager
 from forge_core.schemas import RepositoryData, FileNode
@@ -43,9 +44,7 @@ def run_analysis(target: str):
         files_data = []
         file_tree = Tree(f"[bold blue]📂 {os.path.basename(os.path.abspath(repo_path))}[/bold blue]")
 
-        # Scan files in repo
         for root, dirs, files in os.walk(repo_path):
-            # Exclude common meta/build folders
             dirs[:] = [d for d in dirs if d not in {".git", "__pycache__", "node_modules", ".venv", "venv", ".idea", ".vscode"}]
                 
             for file in files:
@@ -55,7 +54,6 @@ def run_analysis(target: str):
                 symbols = []
                 file_imports = []
 
-                # Parse Python files with Tree-Sitter
                 if ext == ".py":
                     try:
                         with open(full_path, "r", encoding="utf-8", errors="ignore") as f:
@@ -76,14 +74,11 @@ def run_analysis(target: str):
                     )
                 )
 
-                # Add node to visual tree
                 file_tree.add(f"[green]{rel_path}[/green] ({len(symbols)} symbols, {len(file_imports)} imports extracted)")
 
-        # Render File Hierarchy
         console.print("\n[bold]Repository File Structure & Symbol Summary:[/bold]")
         console.print(file_tree)
 
-        # Render Module Import Graph Summary
         if dep_graph.imports:
             console.print("\n[bold]Internal & External Module Import Graph:[/bold]")
             import_table = Table(show_header=True, header_style="bold cyan")
@@ -95,7 +90,6 @@ def run_analysis(target: str):
 
             console.print(import_table)
 
-        # Extract Dependencies
         deps = DependencyAnalyzer.extract_python_dependencies(repo_path)
         if deps:
             console.print("\n[bold]Dependencies Detected:[/bold]")
@@ -160,10 +154,60 @@ def explain_cmd(
     finally:
         manager.cleanup()
 
+@app.command(name="chat")
+def chat_cmd(
+    target: str = typer.Argument(".", help="Path to local folder or GitHub repository URL")
+):
+    """Start an interactive AI chat session anchored to the codebase context."""
+    console = Console()
+    console.print(Panel("[bold cyan]Forge AI Chat:[/bold cyan] Indexing repository context..."))
+
+    manager = WorkspaceManager(target)
+    dep_graph = DependencyGraph()
+
+    try:
+        repo_path = manager.setup_workspace()
+        parser = CodeParser()
+        tree_summary = []
+
+        for root, dirs, files in os.walk(repo_path):
+            dirs[:] = [d for d in dirs if d not in {".git", "__pycache__", "node_modules", ".venv", "venv", ".idea", ".vscode"}]
+            for file in files:
+                full_path = os.path.join(root, file)
+                rel_path = os.path.relpath(full_path, repo_path)
+                if file.endswith(".py"):
+                    try:
+                        with open(full_path, "r", encoding="utf-8", errors="ignore") as f:
+                            _, file_imports = parser.parse_python_file(rel_path, f.read())
+                            for imp in file_imports:
+                                dep_graph.add_import(rel_path, imp)
+                    except Exception:
+                        pass
+                tree_summary.append(rel_path)
+
+        agent = CodebaseAgent()
+        chat = agent.start_chat_session("\n".join(tree_summary), dep_graph.imports)
+
+        console.print("[bold green]Context loaded![/bold green] Type [yellow]exit[/yellow] or [yellow]quit[/yellow] to end session.\n")
+
+        while True:
+            user_input = Prompt.ask("[bold magenta]forge-ai>[/bold magenta]").strip()
+            if not user_input:
+                continue
+            if user_input.lower() in {"exit", "quit"}:
+                console.print("[bold yellow]Ending session. Bye![/bold yellow]")
+                break
+
+            response = chat.send_message(user_input)
+            console.print(Panel(response.text, title="Forge AI", border_style="cyan"))
+
+    finally:
+        manager.cleanup()
+
 @app.command(name="version")
 def version_cmd():
     """Print Forge version."""
-    Console().print("[bold cyan]Forge CLI v0.3.0[/bold cyan]")
+    Console().print("[bold cyan]Forge CLI v0.4.0[/bold cyan]")
 
 if __name__ == "__main__":
     app()
