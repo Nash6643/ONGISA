@@ -6,6 +6,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent.parent.parent
 sys.path.insert(0, str(BASE_DIR / "packages" / "forge-analyzer" / "src"))
 sys.path.insert(0, str(BASE_DIR / "packages" / "forge-core" / "src"))
 sys.path.insert(0, str(BASE_DIR / "packages" / "forge-ai" / "src"))
+sys.path.insert(0, str(BASE_DIR / "packages" / "forge-refactor" / "src"))
 
 import os
 import typer
@@ -21,6 +22,7 @@ from forge_core.schemas import FileNode
 from forge_analyzer import CodeParser, DependencyGraph, DependencyAnalyzer, MultiLangParser
 from forge_ai import CodebaseAgent, CodebaseVectorIndex
 from forge_analyzer import ArchitectureDetector
+from forge_refactor import RefactorEngine
 
 # Mapping file extensions to language names
 LANGUAGE_MAP = {
