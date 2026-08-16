@@ -1,24 +1,41 @@
-from typing import List, Dict, Set, Any
+from typing import List, Dict, Set, Any, Callable
 from pydantic import BaseModel
 from forge_core.schemas import FileNode
 from forge_analyzer.graph import DependencyGraph
 
 class ArchitectureIssue(BaseModel):
-    issue_type: str  # "Circular Dependency", "God Module", "Orphan Module", "High Coupling"
-    severity: str    # "HIGH", "MEDIUM", "LOW"
+    """Represents a detected architectural issue."""
+    issue_type: str  # e.g., "Circular Dependency", "God Module", "Orphan Module", "High Coupling"
+    severity: str    # e.g., "HIGH", "MEDIUM", "LOW"
     target: str
     description: str
 
 class ArchitectureDetector:
+    """
+    A collection of static methods for detecting common architectural issues
+    within a codebase represented by a dependency graph and file nodes.
+    """
+
     @staticmethod
     def detect_circular_dependencies(dep_graph: DependencyGraph) -> List[ArchitectureIssue]:
-        """Detect circular import chains in the dependency graph."""
-        issues = []
+        """
+        Detects circular import chains in the provided dependency graph.
+
+        Args:
+            dep_graph: The dependency graph representing module imports.
+
+        Returns:
+            A list of ArchitectureIssue instances for each detected circular dependency.
+        """
+        issues: List[ArchitectureIssue] = []
         visited: Set[str] = set()
         rec_stack: Set[str] = set()
         cycles: List[List[str]] = []
 
-        def dfs(node: str, path: List[str]):
+        def dfs(node: str, path: List[str]) -> None:
+            """
+            Depth-first search helper to find cycles.
+            """
             visited.add(node)
             rec_stack.add(node)
             path.append(node)
@@ -52,12 +69,26 @@ class ArchitectureDetector:
         return issues
 
     @staticmethod
-    def detect_god_modules(files: List[FileNode], symbol_threshold: int = 20, size_kb_threshold: int = 50) -> List[ArchitectureIssue]:
-        """Flag modules with excessive symbols or size as potential God Objects."""
-        issues = []
+    def detect_god_modules(
+        files: List[FileNode],
+        symbol_threshold: int = 20,
+        size_kb_threshold: int = 50
+    ) -> List[ArchitectureIssue]:
+        """
+        Flags modules with excessive symbols or size as potential 'God Modules'.
+
+        Args:
+            files: A list of FileNode objects representing the files in the codebase.
+            symbol_threshold: The minimum number of symbols a module must have to be considered a 'God Module'.
+            size_kb_threshold: The minimum size in KB a module must have to be considered a 'God Module'.
+
+        Returns:
+            A list of ArchitectureIssue instances for each detected 'God Module'.
+        """
+        issues: List[ArchitectureIssue] = []
         for file in files:
-            symbol_count = len(file.symbols)
-            size_kb = file.size_bytes / 1024
+            symbol_count: int = len(file.symbols)
+            size_kb: float = file.size_bytes / 1024
 
             if symbol_count >= symbol_threshold or size_kb >= size_kb_threshold:
                 issues.append(
@@ -71,18 +102,32 @@ class ArchitectureDetector:
         return issues
 
     @staticmethod
-    def detect_orphan_modules(files: List[FileNode], dep_graph: DependencyGraph) -> List[ArchitectureIssue]:
-        """Flag internal non-root files that are never imported anywhere in the codebase."""
-        issues = []
+    def detect_orphan_modules(
+        files: List[FileNode],
+        dep_graph: DependencyGraph
+    ) -> List[ArchitectureIssue]:
+        """
+        Flags internal non-root files that are never imported anywhere in the codebase.
+
+        Args:
+            files: A list of FileNode objects representing the files in the codebase.
+            dep_graph: The dependency graph representing module imports.
+
+        Returns:
+            A list of ArchitectureIssue instances for each detected orphan module.
+        """
+        issues: List[ArchitectureIssue] = []
         all_imported_targets: Set[str] = set()
         for targets in dep_graph.imports.values():
             all_imported_targets.update(targets)
 
         for file in files:
-            # Skip main/entrypoint files
+            # Skip common main/entrypoint files or __init__.py which are often implicitly used
             if file.name in {"main.py", "__init__.py", "app.py", "cli.py", "index.js", "index.ts", "lib.rs", "main.rs"}:
                 continue
 
+            # A module is considered an orphan if it's not imported by any other module
+            # but is present in the dependency graph's keys (meaning it has potential outgoing imports itself)
             if file.path not in all_imported_targets and file.path in dep_graph.imports:
                 issues.append(
                     ArchitectureIssue(

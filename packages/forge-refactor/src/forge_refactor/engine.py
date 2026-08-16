@@ -1,6 +1,6 @@
 import os
 import difflib
-from typing import Dict, Any, Optional
+from typing import Dict, Any
 from google import genai
 
 class RefactorEngine:
@@ -10,7 +10,7 @@ class RefactorEngine:
             raise ValueError("GEMINI_API_KEY environment variable is required.")
         self.client = genai.Client(api_key=api_key)
 
-def generate_refactor_patch(self, file_path: str, file_content: str, instruction: str) -> Dict[str, Any]:
+    def generate_refactor_patch(self, file_path: str, file_content: str, instruction: str) -> Dict[str, Any]:
         """Generate a refactored version of the file content and return a unified diff patch."""
         prompt = (
             f"You are an expert software engineer and code refactoring specialist.\n"
@@ -33,7 +33,6 @@ def generate_refactor_patch(self, file_path: str, file_content: str, instruction
         )
 
         refactored_code = response.text.strip()
-        # Clean markdown code block boundaries if present
         if refactored_code.startswith("```"):
             lines = refactored_code.split("\n")
             if lines[0].startswith("```"):
@@ -42,7 +41,6 @@ def generate_refactor_patch(self, file_path: str, file_content: str, instruction
                 lines = lines[:-1]
             refactored_code = "\n".join(lines).strip()
 
-        # Compute unified git diff
         diff_lines = list(
             difflib.unified_diff(
                 file_content.splitlines(keepends=True),
