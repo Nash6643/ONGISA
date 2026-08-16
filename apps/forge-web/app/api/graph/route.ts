@@ -4,9 +4,14 @@ import path from 'path';
 
 export async function GET() {
   try {
-    const graphPath = path.join(process.cwd(), '..', '..', 'graph.json');
+    // Go up two levels from apps/forge-web to reach C:\Users\Omar\Desktop\forge\graph.json
+    const graphPath = path.resolve(process.cwd(), '..', '..', 'graph.json');
+
     if (!fs.existsSync(graphPath)) {
-      return NextResponse.json({ error: 'graph.json not found. Run analysis first.' }, { status: 404 });
+      return NextResponse.json(
+        { error: `graph.json not found at ${graphPath}. Run CLI analysis first.` },
+        { status: 404 }
+      );
     }
 
     const fileData = fs.readFileSync(graphPath, 'utf8');

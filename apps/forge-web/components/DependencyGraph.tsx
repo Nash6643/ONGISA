@@ -38,8 +38,19 @@ export default function DependencyGraph() {
     return <div className="p-8 text-gray-400">Loading codebase dependency graph...</div>;
   }
 
-  // Safely extract files array regardless of top-level schema
-  const filesList: FileData[] = Array.isArray(data) ? data : data.files || [];
+  // Parse files list dynamically based on json schema
+  let filesList: FileData[] = [];
+  if (Array.isArray(data)) {
+    filesList = data;
+  } else if (Array.isArray(data.files)) {
+    filesList = data.files;
+  } else if (typeof data === 'object') {
+    // Handle dictionary structure where keys are file paths
+    filesList = Object.entries(data).map(([filePath, fileDetails]: [string, any]) => ({
+      path: filePath,
+      ...(typeof fileDetails === 'object' ? fileDetails : {}),
+    }));
+  }
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-3 gap-6 p-6">
@@ -49,7 +60,7 @@ export default function DependencyGraph() {
         </h2>
         
         {filesList.length === 0 ? (
-          <p className="text-sm text-gray-500">No file data found in graph.json.</p>
+          <p className="text-sm text-gray-500">No file data found in graph.json. Run CLI analysis first.</p>
         ) : (
           <div className="space-y-2 max-h-[600px] overflow-y-auto">
             {filesList.map((file) => (
@@ -92,21 +103,29 @@ export default function DependencyGraph() {
             <div className="mb-4">
               <h4 className="text-xs uppercase text-gray-500 font-semibold mb-1">Exported Symbols</h4>
               <ul className="space-y-1 max-h-40 overflow-y-auto">
-                {(selectedFile.symbols || []).map((sym, i) => (
-                  <li key={i} className="text-xs font-mono text-emerald-400">
-                    [{sym.kind}] {sym.name} (L{sym.line})
-                  </li>
-                ))}
+                {(selectedFile.symbols || []).length > 0 ? (
+                  selectedFile.symbols?.map((sym, i) => (
+                    <li key={i} className="text-xs font-mono text-emerald-400">
+                      [{sym.kind}] {sym.name} (L{sym.line})
+                    </li>
+                  ))
+                ) : (
+                  <li className="text-xs text-gray-500">No symbols detected</li>
+                )}
               </ul>
             </div>
             <div>
               <h4 className="text-xs uppercase text-gray-500 font-semibold mb-1">Imports</h4>
               <ul className="space-y-1 max-h-40 overflow-y-auto">
-                {(selectedFile.imports || []).map((imp, i) => (
-                  <li key={i} className="text-xs font-mono text-gray-400">
-                    ➔ {imp}
-                  </li>
-                ))}
+                {(selectedFile.imports || []).length > 0 ? (
+                  selectedFile.imports?.map((imp, i) => (
+                    <li key={i} className="text-xs font-mono text-gray-400">
+                      ➔ {imp}
+                    </li>
+                  ))
+                ) : (
+                  <li className="text-xs text-gray-500">No imports detected</li>
+                )}
               </ul>
             </div>
           </div>
