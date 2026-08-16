@@ -2,7 +2,7 @@ import sys
 from pathlib import Path
 
 # Force Python to prefer local src folders over pip-cached site-packages
-BASE_DIR = Path(__file__).resolve().parent.parent.parent.parent
+BASE_DIR = Path(__file__).resolve().parent.parent.parent.parent.parent
 sys.path.insert(0, str(BASE_DIR / "packages" / "forge-analyzer" / "src"))
 sys.path.insert(0, str(BASE_DIR / "packages" / "forge-core" / "src"))
 sys.path.insert(0, str(BASE_DIR / "packages" / "forge-ai" / "src"))
@@ -19,7 +19,14 @@ from rich.prompt import Prompt
 
 from forge_core.cloner import WorkspaceManager
 from forge_core.schemas import FileNode
-from forge_analyzer import CodeParser, DependencyGraph, DependencyAnalyzer, MultiLangParser
+from forge_analyzer import (
+    CodeParser,
+    DependencyGraph,
+    DependencyAnalyzer,
+    MultiLangParser,
+    ArchitectureDetector,
+    ArchitectureIssue,
+)
 from forge_ai import CodebaseAgent, CodebaseVectorIndex
 from forge_analyzer import ArchitectureDetector
 from forge_refactor import RefactorEngine
@@ -190,6 +197,50 @@ def run_analysis(target: str, export_graph_path: Optional[str] = None):
 
     console.print("\n[bold green]✓ Multi-Language Graph Analysis Complete![/bold green]\n")
 
+
+@app.command(name="refactor")
+def refactor_cmd(
+    file_path: str = typer.Argument(..., help="Relative path to the file to refactor"),
+    instruction: str = typer.Option(..., "--instruction", "-i", help="Refactoring instructions or goals"),
+    apply: bool = typer.Option(False, "--apply", "-a", help="Automatically write changes to file without prompt")
+):
+    """Generate an AI-driven refactoring patch for a specific file and view the unified diff."""
+    console = Console()
+    if not os.path.exists(file_path):
+        console.print(f"[bold red]Error:[/bold red] File not found at [yellow]{file_path}[/yellow]")
+        return
+
+    try:
+        with open(file_path, "r", encoding="utf-8", errors="ignore") as f:
+            original_content = f.read()
+
+        console.print(Panel(f"[bold cyan]Forge Refactor Engine Target:[/bold cyan] [yellow]{file_path}[/yellow]\n[dim]Instruction: {instruction}[/dim]"))
+
+        with console.status("[bold cyan]Analyzing code & generating refactoring patch...[/bold cyan]"):
+            engine = RefactorEngine()
+            result = engine.generate_refactor_patch(file_path, original_content, instruction)
+
+        patch = result["patch"]
+        if not patch:
+            console.print("[yellow]No structural changes needed or proposed by engine.[/yellow]")
+            return
+
+        console.print("\n[bold white]Proposed Unified Diff Patch:[/bold white]")
+        console.print(Panel(patch, border_style="magenta"))
+
+        should_apply = apply
+        if not apply:
+            should_apply = Prompt.ask("Apply this patch directly to the file?", choices=["y", "n"], default="n") == "y"
+
+        if should_apply:
+            with open(file_path, "w", encoding="utf-8") as f:
+                f.write(result["refactored_code"])
+            console.print(f"[bold green]✓ Applied patch successfully to {file_path}[/bold green]")
+        else:
+            console.print("[dim]Patch discarded. No files were modified.[/dim]")
+
+    except Exception as e:
+        console.print(f"[bold red]Refactoring Error:[/bold red] {e}")
 
 @app.command(name="analyze")
 def analyze_cmd(
