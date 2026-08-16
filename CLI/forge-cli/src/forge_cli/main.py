@@ -20,6 +20,7 @@ from forge_core.cloner import WorkspaceManager
 from forge_core.schemas import FileNode
 from forge_analyzer import CodeParser, DependencyGraph, DependencyAnalyzer, MultiLangParser
 from forge_ai import CodebaseAgent, CodebaseVectorIndex
+from forge_analyzer import ArchitectureDetector
 
 # Mapping file extensions to language names
 LANGUAGE_MAP = {
@@ -156,6 +157,31 @@ def run_analysis(target: str, export_graph_path: Optional[str] = None):
                 dep_table.add_row(dep.name, dep.version or "unspecified")
             
             console.print(dep_table)
+
+        issues = []
+        issues.extend(ArchitectureDetector.detect_circular_dependencies(dep_graph))
+        issues.extend(ArchitectureDetector.detect_god_modules(files_data))
+        issues.extend(ArchitectureDetector.detect_orphan_modules(files_data, dep_graph))
+
+        if issues:
+            console.print("\n[bold red]⚠️ Architectural Issues & Anti-Patterns Detected:[/bold red]")
+            issue_table = Table(show_header=True, header_style="bold red")
+            issue_table.add_column("Severity", width=10)
+            issue_table.add_column("Type", width=22)
+            issue_table.add_column("Target File", width=25)
+            issue_table.add_column("Description")
+
+            for issue in issues:
+                color = "red" if issue.severity == "HIGH" else "yellow" if issue.severity == "MEDIUM" else "dim"
+                issue_table.add_row(
+                    f"[{color}]{issue.severity}[/{color}]",
+                    issue.issue_type,
+                    issue.target,
+                    issue.description
+                )
+
+            console.print(issue_table)
+            
 
     finally:
         manager.cleanup()
