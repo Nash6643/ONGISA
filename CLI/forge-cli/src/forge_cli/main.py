@@ -163,11 +163,13 @@ def run_analysis(target: str, export_graph_path: Optional[str] = None):
         console.print()
         render_terminal_dependency_graph(console, dep_graph)
 
+        
         # Export JSON graph if flag is active
         if export_graph_path:
+            out_file = Path(export_graph_path)
+            out_file.parent.mkdir(parents=True, exist_ok=True)  # Automatically create missing folders
             graph_data = dep_graph.to_json()
-            with open(export_graph_path, "w", encoding="utf-8") as f:
-                f.write(graph_data)
+            out_file.write_text(graph_data, encoding="utf-8")
             console.print(f"\n[bold green]✓ Exported dependency graph payload to:[/bold green] [yellow]{export_graph_path}[/yellow]")
 
         deps = DependencyAnalyzer.extract_python_dependencies(repo_path)
