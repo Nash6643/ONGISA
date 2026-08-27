@@ -1,0 +1,48 @@
+name: ONGISA CI Pipeline
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  python-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pytest tree-sitter
+
+      - name: Run Pytest Suite
+        env:
+          PYTHONPATH: packages/forge-refactor/src:packages/forge-analyzer/src:packages/forge-core/src:packages/forge-ai/src
+        run: pytest
+
+  web-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Web Dependencies
+        run: |
+          cd apps/forge-web
+          npm ci
+
+      - name: Build Next.js Dashboard
+        run: |
+          cd apps/forge-web
+          npm run build

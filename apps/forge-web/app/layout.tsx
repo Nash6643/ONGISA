@@ -1,8 +1,8 @@
 import React from 'react';
 
 export const metadata = {
-  title: 'Forge Dashboard',
-  description: 'AI-Powered Codebase Analysis & Refactoring',
+  title: 'ONGISA - Codebase & GitHub Statistical Analyzer',
+  description: 'Omar Nashiru-deen GitHub Statistical Analyzer & Architecture Engine',
 };
 
 export default function RootLayout({

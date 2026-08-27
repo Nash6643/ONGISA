@@ -31,12 +31,12 @@ export default function Home() {
       <div className="max-w-7xl mx-auto space-y-6">
         <header className="border-b border-gray-800 pb-4 flex justify-between items-end">
           <div>
-            <h1 className="text-3xl font-bold tracking-tight text-white">
-              Forge Architecture Dashboard
-            </h1>
-            <p className="text-sm text-gray-400 mt-1">
-              Codebase static analysis, symbol tree mapping, and automated refactoring.
-            </p>
+          <h1 className="text-3xl font-bold tracking-tight text-white">
+  ONGISA Architecture Dashboard
+</h1>
+<p className="text-sm text-gray-400 mt-1">
+  Omar Nashiru-deen GitHub Statistical Analyzer — Static analysis & symbol tree mapping.
+</p>
           </div>
           <div className="flex gap-2">
             <button

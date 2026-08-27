@@ -28,7 +28,6 @@ from forge_analyzer import (
     ArchitectureIssue,
 )
 from forge_ai import CodebaseAgent, CodebaseVectorIndex
-from forge_analyzer import ArchitectureDetector
 from forge_refactor import RefactorEngine
 
 # Mapping file extensions to language names
@@ -47,7 +46,20 @@ LANGUAGE_MAP = {
     ".md": "Markdown"
 }
 
-app = typer.Typer(help="Forge CLI - Autonomous AI Software Architecture Engine")
+# Mapping extensions to tree-sitter language identifiers
+TREESITTER_LANG_MAP = {
+    ".py": "python",
+    ".rs": "rust",
+    ".js": "javascript",
+    ".ts": "typescript",
+    ".tsx": "tsx",
+    ".java": "java",
+    ".go": "go",
+    ".c": "c",
+    ".cpp": "cpp",
+}
+
+app = typer.Typer(help="ONGISA CLI - Omar Nashiru-deen GitHub Statistical Analyzer & Architecture Engine")
 
 
 def render_terminal_dependency_graph(console: Console, dep_graph: DependencyGraph):
@@ -63,7 +75,7 @@ def render_terminal_dependency_graph(console: Console, dep_graph: DependencyGrap
         
         for target in sorted(targets):
             # Differentiate local path imports vs external modules
-            if target.startswith(".") or "/" in target or target.startswith("forge_"):
+            if target.startswith(".") or "/" in target or target.startswith("forge_") or target.startswith("ongisa_"):
                 source_branch.add(f"└── [green]🔗 {target}[/green] [dim](internal)[/dim]")
             else:
                 source_branch.add(f"└── [magenta]📦 {target}[/magenta] [dim](external/lib)[/dim]")
@@ -96,14 +108,15 @@ def _parse_file_content(ts_parser: MultiLangParser, fallback_parser: CodeParser,
 def run_analysis(target: str, export_graph_path: Optional[str] = None):
     """Core scanner execution logic with Rich terminal visual rendering."""
     console = Console()
-    console.print(Panel(f"[bold cyan]Forge Engine Scanning:[/bold cyan] [yellow]{target}[/yellow]"))
+    console.print(Panel(f"[bold cyan]ONGISA Engine Scanning:[/bold cyan] [yellow]{target}[/yellow]"))
 
     manager = WorkspaceManager(target)
     dep_graph = DependencyGraph()
 
     try:
         repo_path = manager.setup_workspace()
-        parser = CodeParser()
+        fallback_parser = CodeParser()
+        ts_parser = MultiLangParser()
         
         files_data = []
         file_tree = Tree(f"[bold blue]📂 {os.path.basename(os.path.abspath(repo_path))}[/bold blue]")
@@ -122,9 +135,11 @@ def run_analysis(target: str, export_graph_path: Optional[str] = None):
                     try:
                         with open(full_path, "r", encoding="utf-8", errors="ignore") as f:
                             content = f.read()
-                            symbols, file_imports = _parse_file_content(parser, rel_path, content, ext)
+                            symbols, file_imports = _parse_file_content(ts_parser, fallback_parser, rel_path, content, ext)
                             for imp in file_imports:
-                                dep_graph.add_import(rel_path, imp.module)
+                                # Handle string vs object import representations
+                                mod_name = getattr(imp, 'module', str(imp))
+                                dep_graph.add_import(rel_path, mod_name)
                     except Exception:
                         pass
 
@@ -190,12 +205,11 @@ def run_analysis(target: str, export_graph_path: Optional[str] = None):
                 )
 
             console.print(issue_table)
-            
 
     finally:
         manager.cleanup()
 
-    console.print("\n[bold green]✓ Multi-Language Graph Analysis Complete![/bold green]\n")
+    console.print("\n[bold green]✓ ONGISA Analysis Complete![/bold green]\n")
 
 
 @app.command(name="refactor")
@@ -214,7 +228,7 @@ def refactor_cmd(
         with open(file_path, "r", encoding="utf-8", errors="ignore") as f:
             original_content = f.read()
 
-        console.print(Panel(f"[bold cyan]Forge Refactor Engine Target:[/bold cyan] [yellow]{file_path}[/yellow]\n[dim]Instruction: {instruction}[/dim]"))
+        console.print(Panel(f"[bold cyan]ONGISA Refactor Engine Target:[/bold cyan] [yellow]{file_path}[/yellow]\n[dim]Instruction: {instruction}[/dim]"))
 
         with console.status("[bold cyan]Analyzing code & generating refactoring patch...[/bold cyan]"):
             engine = RefactorEngine()
@@ -242,12 +256,13 @@ def refactor_cmd(
     except Exception as e:
         console.print(f"[bold red]Refactoring Error:[/bold red] {e}")
 
+
 @app.command(name="analyze")
 def analyze_cmd(
     target: str = typer.Argument(".", help="Path to local codebase folder or GitHub repository URL"),
     export_graph: Optional[str] = typer.Option(None, "--export-graph", help="Path to export dependency graph JSON")
 ):
-    """Analyze a codebase structure, symbols, dependencies, and import topology."""
+    """Analyze codebase structure, symbols, dependencies, and import topology."""
     run_analysis(target, export_graph)
 
 
@@ -257,7 +272,7 @@ def chat_cmd(
 ):
     """Start an interactive RAG-powered chat session with your codebase."""
     console = Console()
-    console.print(Panel(f"[bold cyan]Forge AI RAG Session Initializing:[/bold cyan] [yellow]{target}[/yellow]"))
+    console.print(Panel(f"[bold cyan]ONGISA AI Session Initializing:[/bold cyan] [yellow]{target}[/yellow]"))
 
     manager = WorkspaceManager(target)
     
@@ -297,7 +312,7 @@ def chat_cmd(
         agent = CodebaseAgent()
 
         # Interactive Chat Loop
-        console.print("[bold cyan]Ask Forge AI any question about this codebase (type 'exit' or 'quit' to end):[/bold cyan]\n")
+        console.print("[bold cyan]Ask ONGISA AI any question about this codebase (type 'exit' or 'quit' to end):[/bold cyan]\n")
         while True:
             query = Prompt.ask("[bold green]Developer[/bold green]")
             if query.strip().lower() in {"exit", "quit"}:
@@ -311,7 +326,7 @@ def chat_cmd(
                 relevant_chunks = index.search(query, top_k=3)
                 response = agent.answer_with_rag(query, relevant_chunks)
 
-            console.print(Panel(response, title="[bold magenta]Forge AI[/bold magenta]", border_style="magenta"))
+            console.print(Panel(response, title="[bold magenta]ONGISA AI[/bold magenta]", border_style="magenta"))
             console.print()
 
     except Exception as e:
