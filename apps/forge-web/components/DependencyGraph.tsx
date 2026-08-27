@@ -1,148 +1,212 @@
-'use client';
+"use client";
 
-import React, { useEffect, useState } from 'react';
+import React, { useState, useMemo } from "react";
 
-interface SymbolNode {
-  name: string;
-  kind: string;
-  line: number;
-}
-
-interface FileData {
-  path: string;
+export interface GraphNode {
+  id: string;
   name?: string;
-  symbols?: SymbolNode[];
-  imports?: string[];
+  sizeBytes?: number;
+  symbolCount?: number;
+  language?: string;
+  type?: string;
 }
 
-export default function DependencyGraph() {
-  const [data, setData] = useState<any>(null);
-  const [selectedFile, setSelectedFile] = useState<FileData | null>(null);
-  const [viewMode, setViewMode] = useState<'canvas' | 'list'>('canvas');
+export interface GraphEdge {
+  source: string;
+  target: string;
+  relation?: string;
+}
 
-  useEffect(() => {
-    fetch('/api/graph')
-      .then((res) => res.json())
-      .then((resData) => {
-        if (resData && !resData.error) {
-          setData(resData);
-        }
-      })
-      .catch((err) => console.error(err));
-  }, []);
+export interface DependencyGraphProps {
+  nodes?: GraphNode[];
+  edges?: GraphEdge[];
+  onSelectNode?: (nodeId: string) => void;
+}
 
-  if (!data) {
-    return <div className="p-8 text-gray-400">Loading codebase dependency graph...</div>;
-  }
+export const DependencyGraph: React.FC<DependencyGraphProps> = ({
+  nodes = [],
+  edges = [],
+  onSelectNode,
+}) => {
+  // Filter States
+  const [minFileSize, setMinFileSize] = useState<number>(0);
+  const [minSymbolCount, setMinSymbolCount] = useState<number>(0);
+  const [selectedLang, setSelectedLang] = useState<string>("ALL");
+  const [searchQuery, setSearchQuery] = useState<string>("");
 
-  let filesList: FileData[] = [];
-  if (Array.isArray(data)) {
-    filesList = data;
-  } else if (Array.isArray(data.files)) {
-    filesList = data.files;
-  } else if (typeof data === 'object') {
-    filesList = Object.entries(data).map(([filePath, fileDetails]: [string, any]) => ({
-      path: filePath,
-      ...(typeof fileDetails === 'object' ? fileDetails : {}),
-    }));
-  }
+  // Calculate dynamic languages
+  const availableLanguages = useMemo(() => {
+    const langs = new Set<string>();
+    nodes.forEach((n) => {
+      if (n.language) langs.add(n.language);
+    });
+    return ["ALL", ...Array.from(langs)];
+  }, [nodes]);
+
+  // Max bounds for sliders
+  const maxFileSize = useMemo(() => {
+    return nodes.reduce((max, n) => Math.max(max, n.sizeBytes || 0), 10000);
+  }, [nodes]);
+
+  const maxSymbols = useMemo(() => {
+    return nodes.reduce((max, n) => Math.max(max, n.symbolCount || 0), 20);
+  }, [nodes]);
+
+  // Compute Filtered Nodes & Edges
+  const { filteredNodes, filteredEdges } = useMemo(() => {
+    const activeIds = new Set<string>();
+
+    const filteredN = nodes.filter((node) => {
+      const nodeSize = node.sizeBytes || 0;
+      const nodeSymbols = node.symbolCount || 0;
+      const nodeLang = node.language || "Unknown";
+
+      const matchesSize = nodeSize >= minFileSize;
+      const matchesSymbols = nodeSymbols >= minSymbolCount;
+      const matchesLang =
+        selectedLang === "ALL" || nodeLang.toLowerCase() === selectedLang.toLowerCase();
+      const matchesSearch =
+        !searchQuery ||
+        node.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (node.name && node.name.toLowerCase().includes(searchQuery.toLowerCase()));
+
+      const passes = matchesSize && matchesSymbols && matchesLang && matchesSearch;
+      if (passes) {
+        activeIds.add(node.id);
+      }
+      return passes;
+    });
+
+    // Prune edges pointing to/from filtered nodes
+    const filteredE = edges.filter(
+      (e) => activeIds.has(e.source) && activeIds.has(e.target)
+    );
+
+    return { filteredNodes: filteredN, filteredEdges: filteredE };
+  }, [nodes, edges, minFileSize, minSymbolCount, selectedLang, searchQuery]);
 
   return (
-    <div className="space-y-4">
-      <div className="flex justify-between items-center bg-gray-900 p-4 rounded-xl border border-gray-800">
-        <h2 className="text-xl font-bold text-cyan-400">Architecture Topology</h2>
-        <div className="flex gap-2">
-          <button
-            onClick={() => setViewMode('canvas')}
-            className={`px-3 py-1 rounded text-sm font-medium transition ${
-              viewMode === 'canvas' ? 'bg-cyan-600 text-white' : 'bg-gray-800 text-gray-400 hover:text-white'
-            }`}
-          >
-            Visual Canvas
-          </button>
-          <button
-            onClick={() => setViewMode('list')}
-            className={`px-3 py-1 rounded text-sm font-medium transition ${
-              viewMode === 'list' ? 'bg-cyan-600 text-white' : 'bg-gray-800 text-gray-400 hover:text-white'
-            }`}
-          >
-            Module List
-          </button>
+    <div className="flex flex-col w-full h-full bg-slate-900 border border-slate-800 rounded-xl overflow-hidden shadow-xl">
+      {/* Control Bar Header */}
+      <div className="p-4 bg-slate-800/80 backdrop-blur border-b border-slate-700/60 flex flex-col gap-3">
+        <div className="flex items-center justify-between">
+          <h3 className="text-sm font-semibold text-slate-200 flex items-center gap-2">
+            <span className="w-2.5 h-2.5 rounded-full bg-cyan-400 animate-pulse" />
+            Dependency Topology Controls
+          </h3>
+          <span className="text-xs text-slate-400 font-mono">
+            Showing <strong className="text-cyan-400">{filteredNodes.length}</strong> / {nodes.length} nodes (
+            <strong className="text-cyan-400">{filteredEdges.length}</strong> edges)
+          </span>
+        </div>
+
+        {/* Filter Sliders and Inputs */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
+          {/* File Search */}
+          <div className="flex flex-col gap-1">
+            <label className="text-xs font-medium text-slate-400">Search Module</label>
+            <input
+              type="text"
+              placeholder="Filter by path..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="bg-slate-900 border border-slate-700 rounded px-2.5 py-1 text-xs text-slate-200 focus:outline-none focus:border-cyan-500 transition-colors"
+            />
+          </div>
+
+          {/* Min Size Slider */}
+          <div className="flex flex-col gap-1">
+            <div className="flex justify-between text-xs font-medium text-slate-400">
+              <span>Min Size</span>
+              <span className="text-cyan-400 font-mono">
+                {(minFileSize / 1024).toFixed(1)} KB
+              </span>
+            </div>
+            <input
+              type="range"
+              min={0}
+              max={maxFileSize}
+              step={100}
+              value={minFileSize}
+              onChange={(e) => setMinFileSize(Number(e.target.value))}
+              className="accent-cyan-500 cursor-pointer h-1.5 bg-slate-700 rounded-lg appearance-none mt-1"
+            />
+          </div>
+
+          {/* Min Symbols Slider */}
+          <div className="flex flex-col gap-1">
+            <div className="flex justify-between text-xs font-medium text-slate-400">
+              <span>Min Symbols</span>
+              <span className="text-cyan-400 font-mono">{minSymbolCount}</span>
+            </div>
+            <input
+              type="range"
+              min={0}
+              max={maxSymbols}
+              step={1}
+              value={minSymbolCount}
+              onChange={(e) => setMinSymbolCount(Number(e.target.value))}
+              className="accent-cyan-500 cursor-pointer h-1.5 bg-slate-700 rounded-lg appearance-none mt-1"
+            />
+          </div>
+
+          {/* Language Select */}
+          <div className="flex flex-col gap-1">
+            <label className="text-xs font-medium text-slate-400">Language</label>
+            <select
+              value={selectedLang}
+              onChange={(e) => setSelectedLang(e.target.value)}
+              className="bg-slate-900 border border-slate-700 rounded px-2 py-1 text-xs text-slate-200 focus:outline-none focus:border-cyan-500 transition-colors cursor-pointer"
+            >
+              {availableLanguages.map((lang) => (
+                <option key={lang} value={lang}>
+                  {lang}
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="col-span-2 bg-gray-900 border border-gray-800 rounded-xl p-4 min-h-[500px] flex flex-col justify-center items-center relative overflow-hidden">
-          {viewMode === 'canvas' ? (
-            <svg className="w-full h-[480px] bg-gray-950 rounded-lg border border-gray-800">
-              {filesList.map((file, idx) => {
-                const angle = (idx / Math.max(filesList.length, 1)) * 2 * Math.PI;
-                const cx = 250 + 160 * Math.cos(angle);
-                const cy = 240 + 160 * Math.sin(angle);
-                const isSelected = selectedFile?.path === file.path;
-
-                return (
-                  <g key={file.path} onClick={() => setSelectedFile(file)} className="cursor-pointer">
-                    <circle
-                      cx={cx}
-                      cy={cy}
-                      r={isSelected ? 18 : 12}
-                      className={`${isSelected ? 'fill-cyan-400 stroke-cyan-200' : 'fill-cyan-900 stroke-cyan-600'} transition-all`}
-                      strokeWidth="2"
-                    />
-                    <text
-                      x={cx}
-                      y={cy + 28}
-                      textAnchor="middle"
-                      className="fill-gray-300 text-[10px] font-mono select-none"
-                    >
-                      {file.path.split('/').pop()}
-                    </text>
-                  </g>
-                );
-              })}
+      {/* Graph Visualizer / List View Area */}
+      <div className="relative flex-1 min-h-[450px] p-4 bg-slate-950 overflow-auto">
+        {filteredNodes.length === 0 ? (
+          <div className="h-full w-full flex flex-col items-center justify-center text-slate-500 text-sm gap-2">
+            <svg className="w-8 h-8 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
             </svg>
-          ) : (
-            <div className="w-full space-y-2 max-h-[480px] overflow-y-auto">
-              {filesList.map((file) => (
-                <div
-                  key={file.path}
-                  onClick={() => setSelectedFile(file)}
-                  className={`p-3 rounded-lg border cursor-pointer transition ${
-                    selectedFile?.path === file.path ? 'border-cyan-500 bg-cyan-950/30' : 'border-gray-800 bg-gray-950'
-                  }`}
-                >
-                  <span className="font-mono text-sm text-gray-200">{file.path}</span>
+            No nodes match the selected criteria. Try easing the filters.
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+            {filteredNodes.map((node) => (
+              <div
+                key={node.id}
+                onClick={() => onSelectNode && onSelectNode(node.id)}
+                className="p-3 bg-slate-900/90 border border-slate-800 rounded-lg hover:border-cyan-500/50 hover:bg-slate-800/60 cursor-pointer transition-all flex flex-col justify-between gap-2 group"
+              >
+                <div className="truncate">
+                  <p className="text-xs font-mono text-cyan-400 group-hover:text-cyan-300 truncate">
+                    {node.name || node.id}
+                  </p>
+                  <p className="text-[10px] text-slate-500 font-mono truncate">{node.id}</p>
                 </div>
-              ))}
-            </div>
-          )}
-        </div>
-
-        <div className="bg-gray-900 border border-gray-800 rounded-xl p-4">
-          <h3 className="text-lg font-semibold text-cyan-400 mb-3">Module Details</h3>
-          {selectedFile ? (
-            <div className="space-y-4">
-              <div>
-                <span className="text-xs uppercase text-gray-500 font-bold">Path</span>
-                <p className="font-mono text-sm text-white break-all">{selectedFile.path}</p>
+                <div className="flex items-center justify-between text-[11px] text-slate-400 pt-2 border-t border-slate-800/80">
+                  <span>{( (node.sizeBytes || 0) / 1024 ).toFixed(1)} KB</span>
+                  <span>{node.symbolCount || 0} symbols</span>
+                  {node.language && (
+                    <span className="px-1.5 py-0.5 rounded bg-slate-800 text-slate-300 text-[10px]">
+                      {node.language}
+                    </span>
+                  )}
+                </div>
               </div>
-              <div>
-                <span className="text-xs uppercase text-gray-500 font-bold">Symbols ({selectedFile.symbols?.length || 0})</span>
-                <ul className="mt-1 space-y-1 max-h-36 overflow-y-auto">
-                  {(selectedFile.symbols || []).map((sym, i) => (
-                    <li key={i} className="text-xs font-mono text-emerald-400">
-                      [{sym.kind}] {sym.name} (L{sym.line})
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            </div>
-          ) : (
-            <p className="text-sm text-gray-500">Select a module node on the canvas to inspect AST metadata.</p>
-          )}
-        </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );
-}
+};
+
+export default DependencyGraph;
