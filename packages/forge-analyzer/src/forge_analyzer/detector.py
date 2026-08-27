@@ -3,6 +3,10 @@ from pydantic import BaseModel
 from forge_core.schemas import FileNode
 from forge_analyzer.graph import DependencyGraph
 
+COMMON_ENTRYPOINT_FILES = frozenset({
+    "main.py", "__init__.py", "app.py", "cli.py", "index.js", "index.ts", "lib.rs", "main.rs"
+})
+
 class ArchitectureIssue(BaseModel):
     """Represents a detected architectural issue."""
     issue_type: str  # e.g., "Circular Dependency", "God Module", "Orphan Module", "High Coupling"
@@ -51,7 +55,7 @@ class ArchitectureDetector:
             rec_stack.remove(node)
             path.pop()
 
-        for node in list(dep_graph.imports.keys()):
+        for node in dep_graph.imports:  # Optimized: Iterate directly over dict keys view
             if node not in visited:
                 dfs(node, [])
 
@@ -117,13 +121,17 @@ class ArchitectureDetector:
             A list of ArchitectureIssue instances for each detected orphan module.
         """
         issues: List[ArchitectureIssue] = []
-        all_imported_targets: Set[str] = set()
-        for targets in dep_graph.imports.values():
-            all_imported_targets.update(targets)
+        
+        # Optimized: Use a set comprehension to build all_imported_targets more efficiently.
+        all_imported_targets: Set[str] = {
+            target
+            for targets_set in dep_graph.imports.values()
+            for target in targets_set
+        }
 
         for file in files:
-            # Skip common main/entrypoint files or __init__.py which are often implicitly used
-            if file.name in {"main.py", "__init__.py", "app.py", "cli.py", "index.js", "index.ts", "lib.rs", "main.rs"}:
+            # Optimized: Use the pre-defined COMMON_ENTRYPOINT_FILES frozenset for faster lookups.
+            if file.name in COMMON_ENTRYPOINT_FILES:
                 continue
 
             # A module is considered an orphan if it's not imported by any other module
