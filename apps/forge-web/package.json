@@ -11,6 +11,7 @@
     "dependencies": {
         "next": "^14.0.0",
         "react": "^18.0.0",
+        "react-diff-viewer-continued": "^4.4.0",
         "react-dom": "^18.0.0"
     },
     "devDependencies": {
