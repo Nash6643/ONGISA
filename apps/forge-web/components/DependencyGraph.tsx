@@ -11,8 +11,6 @@ interface SymbolNode {
 interface FileData {
   path: string;
   name?: string;
-  extension?: string;
-  size_bytes?: number;
   symbols?: SymbolNode[];
   imports?: string[];
 }
@@ -20,6 +18,7 @@ interface FileData {
 export default function DependencyGraph() {
   const [data, setData] = useState<any>(null);
   const [selectedFile, setSelectedFile] = useState<FileData | null>(null);
+  const [viewMode, setViewMode] = useState<'canvas' | 'list'>('canvas');
 
   useEffect(() => {
     fetch('/api/graph')
@@ -27,8 +26,6 @@ export default function DependencyGraph() {
       .then((resData) => {
         if (resData && !resData.error) {
           setData(resData);
-        } else {
-          console.error('Graph API Error:', resData?.error);
         }
       })
       .catch((err) => console.error(err));
@@ -38,14 +35,12 @@ export default function DependencyGraph() {
     return <div className="p-8 text-gray-400">Loading codebase dependency graph...</div>;
   }
 
-  // Parse files list dynamically based on json schema
   let filesList: FileData[] = [];
   if (Array.isArray(data)) {
     filesList = data;
   } else if (Array.isArray(data.files)) {
     filesList = data.files;
   } else if (typeof data === 'object') {
-    // Handle dictionary structure where keys are file paths
     filesList = Object.entries(data).map(([filePath, fileDetails]: [string, any]) => ({
       path: filePath,
       ...(typeof fileDetails === 'object' ? fileDetails : {}),
@@ -53,85 +48,100 @@ export default function DependencyGraph() {
   }
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 p-6">
-      <div className="col-span-2 bg-gray-900 border border-gray-800 rounded-xl p-4">
-        <h2 className="text-xl font-semibold mb-4 text-cyan-400">
-          Project Modules ({filesList.length})
-        </h2>
-        
-        {filesList.length === 0 ? (
-          <p className="text-sm text-gray-500">No file data found in graph.json. Run CLI analysis first.</p>
-        ) : (
-          <div className="space-y-2 max-h-[600px] overflow-y-auto">
-            {filesList.map((file) => (
-              <div
-                key={file.path}
-                onClick={() => setSelectedFile(file)}
-                className={`p-3 rounded-lg border cursor-pointer transition ${
-                  selectedFile?.path === file.path
-                    ? 'border-cyan-500 bg-cyan-950/30'
-                    : 'border-gray-800 bg-gray-950 hover:border-gray-700'
-                }`}
-              >
-                <div className="flex justify-between items-center">
-                  <span className="font-mono text-sm text-gray-200">{file.path}</span>
-                  {file.size_bytes !== undefined && (
-                    <span className="text-xs text-gray-500">
-                      {(file.size_bytes / 1024).toFixed(1)} KB
-                    </span>
-                  )}
-                </div>
-                <div className="flex gap-2 mt-2">
-                  <span className="text-xs bg-gray-800 px-2 py-0.5 rounded text-gray-400">
-                    {(file.symbols || []).length} symbols
-                  </span>
-                  <span className="text-xs bg-gray-800 px-2 py-0.5 rounded text-gray-400">
-                    {(file.imports || []).length} imports
-                  </span>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
+    <div className="space-y-4">
+      <div className="flex justify-between items-center bg-gray-900 p-4 rounded-xl border border-gray-800">
+        <h2 className="text-xl font-bold text-cyan-400">Architecture Topology</h2>
+        <div className="flex gap-2">
+          <button
+            onClick={() => setViewMode('canvas')}
+            className={`px-3 py-1 rounded text-sm font-medium transition ${
+              viewMode === 'canvas' ? 'bg-cyan-600 text-white' : 'bg-gray-800 text-gray-400 hover:text-white'
+            }`}
+          >
+            Visual Canvas
+          </button>
+          <button
+            onClick={() => setViewMode('list')}
+            className={`px-3 py-1 rounded text-sm font-medium transition ${
+              viewMode === 'list' ? 'bg-cyan-600 text-white' : 'bg-gray-800 text-gray-400 hover:text-white'
+            }`}
+          >
+            Module List
+          </button>
+        </div>
       </div>
 
-      <div className="bg-gray-900 border border-gray-800 rounded-xl p-4">
-        <h2 className="text-xl font-semibold mb-4 text-cyan-400">Module Details</h2>
-        {selectedFile ? (
-          <div>
-            <h3 className="font-mono text-sm font-bold text-white mb-2">{selectedFile.path}</h3>
-            <div className="mb-4">
-              <h4 className="text-xs uppercase text-gray-500 font-semibold mb-1">Exported Symbols</h4>
-              <ul className="space-y-1 max-h-40 overflow-y-auto">
-                {(selectedFile.symbols || []).length > 0 ? (
-                  selectedFile.symbols?.map((sym, i) => (
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="col-span-2 bg-gray-900 border border-gray-800 rounded-xl p-4 min-h-[500px] flex flex-col justify-center items-center relative overflow-hidden">
+          {viewMode === 'canvas' ? (
+            <svg className="w-full h-[480px] bg-gray-950 rounded-lg border border-gray-800">
+              {filesList.map((file, idx) => {
+                const angle = (idx / Math.max(filesList.length, 1)) * 2 * Math.PI;
+                const cx = 250 + 160 * Math.cos(angle);
+                const cy = 240 + 160 * Math.sin(angle);
+                const isSelected = selectedFile?.path === file.path;
+
+                return (
+                  <g key={file.path} onClick={() => setSelectedFile(file)} className="cursor-pointer">
+                    <circle
+                      cx={cx}
+                      cy={cy}
+                      r={isSelected ? 18 : 12}
+                      className={`${isSelected ? 'fill-cyan-400 stroke-cyan-200' : 'fill-cyan-900 stroke-cyan-600'} transition-all`}
+                      strokeWidth="2"
+                    />
+                    <text
+                      x={cx}
+                      y={cy + 28}
+                      textAnchor="middle"
+                      className="fill-gray-300 text-[10px] font-mono select-none"
+                    >
+                      {file.path.split('/').pop()}
+                    </text>
+                  </g>
+                );
+              })}
+            </svg>
+          ) : (
+            <div className="w-full space-y-2 max-h-[480px] overflow-y-auto">
+              {filesList.map((file) => (
+                <div
+                  key={file.path}
+                  onClick={() => setSelectedFile(file)}
+                  className={`p-3 rounded-lg border cursor-pointer transition ${
+                    selectedFile?.path === file.path ? 'border-cyan-500 bg-cyan-950/30' : 'border-gray-800 bg-gray-950'
+                  }`}
+                >
+                  <span className="font-mono text-sm text-gray-200">{file.path}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <div className="bg-gray-900 border border-gray-800 rounded-xl p-4">
+          <h3 className="text-lg font-semibold text-cyan-400 mb-3">Module Details</h3>
+          {selectedFile ? (
+            <div className="space-y-4">
+              <div>
+                <span className="text-xs uppercase text-gray-500 font-bold">Path</span>
+                <p className="font-mono text-sm text-white break-all">{selectedFile.path}</p>
+              </div>
+              <div>
+                <span className="text-xs uppercase text-gray-500 font-bold">Symbols ({selectedFile.symbols?.length || 0})</span>
+                <ul className="mt-1 space-y-1 max-h-36 overflow-y-auto">
+                  {(selectedFile.symbols || []).map((sym, i) => (
                     <li key={i} className="text-xs font-mono text-emerald-400">
                       [{sym.kind}] {sym.name} (L{sym.line})
                     </li>
-                  ))
-                ) : (
-                  <li className="text-xs text-gray-500">No symbols detected</li>
-                )}
-              </ul>
+                  ))}
+                </ul>
+              </div>
             </div>
-            <div>
-              <h4 className="text-xs uppercase text-gray-500 font-semibold mb-1">Imports</h4>
-              <ul className="space-y-1 max-h-40 overflow-y-auto">
-                {(selectedFile.imports || []).length > 0 ? (
-                  selectedFile.imports?.map((imp, i) => (
-                    <li key={i} className="text-xs font-mono text-gray-400">
-                      ➔ {imp}
-                    </li>
-                  ))
-                ) : (
-                  <li className="text-xs text-gray-500">No imports detected</li>
-                )}
-              </ul>
-            </div>
-          </div>
-        ) : (
-          <p className="text-sm text-gray-500">Select a file from the list to view AST symbols and dependencies.</p>
-        )}
+          ) : (
+            <p className="text-sm text-gray-500">Select a module node on the canvas to inspect AST metadata.</p>
+          )}
+        </div>
       </div>
     </div>
   );
