@@ -50,10 +50,12 @@ jobs:
           node-version: 20
 
       - name: Install Node Dependencies
+        working-directory: apps/forge-web
         run: npm install
 
       - name: Build Web Application
+        working-directory: apps/forge-web
         env:
           GEMINI_API_KEY: "dummy_key_for_ci_build"
           NEXT_TELEMETRY_DISABLED: 1
-        run: npm run build --workspace=apps/forge-web
+        run: npm run build
