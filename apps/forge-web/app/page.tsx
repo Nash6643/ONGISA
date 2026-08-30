@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import DependencyGraph from '@/components/DependencyGraph';
-import ZipUploader from "@/components/ZipUploader";
+import ZipUploader from '@/components/ZipUploader';
 
 export default function Home() {
   const [activeTab, setActiveTab] = useState<'topology' | 'uploader' | 'refactor'>('topology');
