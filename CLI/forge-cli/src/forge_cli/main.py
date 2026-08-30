@@ -9,6 +9,7 @@ sys.path.insert(0, str(BASE_DIR / "packages" / "forge-ai" / "src"))
 sys.path.insert(0, str(BASE_DIR / "packages" / "forge-refactor" / "src"))
 
 import os
+import shutil
 import typer
 from typing import Optional
 from rich.console import Console
@@ -19,6 +20,7 @@ from rich.prompt import Prompt
 
 from forge_core.cloner import WorkspaceManager
 from forge_core.schemas import FileNode
+from forge_core.zip_handler import extract_zip_archive
 from forge_analyzer import (
     CodeParser,
     DependencyGraph,
@@ -110,7 +112,16 @@ def run_analysis(target: str, export_graph_path: Optional[str] = None):
     console = Console()
     console.print(Panel(f"[bold cyan]ONGISA Engine Scanning:[/bold cyan] [yellow]{target}[/yellow]"))
 
-    manager = WorkspaceManager(target)
+    temp_zip_dir = None
+    actual_target = target
+
+    # Handle .zip archive input
+    if target.endswith(".zip"):
+        console.print(f"[dim]Extracting archive {target}...[/dim]")
+        temp_zip_dir = extract_zip_archive(target)
+        actual_target = temp_zip_dir
+
+    manager = WorkspaceManager(actual_target)
     dep_graph = DependencyGraph()
 
     try:
@@ -163,7 +174,6 @@ def run_analysis(target: str, export_graph_path: Optional[str] = None):
         console.print()
         render_terminal_dependency_graph(console, dep_graph)
 
-        
         # Export JSON graph if flag is active
         if export_graph_path:
             out_file = Path(export_graph_path)
@@ -210,6 +220,8 @@ def run_analysis(target: str, export_graph_path: Optional[str] = None):
 
     finally:
         manager.cleanup()
+        if temp_zip_dir and os.path.exists(temp_zip_dir):
+            shutil.rmtree(temp_zip_dir)
 
     console.print("\n[bold green]✓ ONGISA Analysis Complete![/bold green]\n")
 
@@ -261,7 +273,7 @@ def refactor_cmd(
 
 @app.command(name="analyze")
 def analyze_cmd(
-    target: str = typer.Argument(".", help="Path to local codebase folder or GitHub repository URL"),
+    target: str = typer.Argument(".", help="Path to local codebase folder, .zip archive, or GitHub repository URL"),
     export_graph: Optional[str] = typer.Option(None, "--export-graph", help="Path to export dependency graph JSON")
 ):
     """Analyze codebase structure, symbols, dependencies, and import topology."""
@@ -270,13 +282,21 @@ def analyze_cmd(
 
 @app.command(name="chat")
 def chat_cmd(
-    target: str = typer.Argument(".", help="Path to local codebase folder or GitHub repository URL")
+    target: str = typer.Argument(".", help="Path to local codebase folder, .zip archive, or GitHub repository URL")
 ):
     """Start an interactive RAG-powered chat session with your codebase."""
     console = Console()
     console.print(Panel(f"[bold cyan]ONGISA AI Session Initializing:[/bold cyan] [yellow]{target}[/yellow]"))
 
-    manager = WorkspaceManager(target)
+    temp_zip_dir = None
+    actual_target = target
+
+    if target.endswith(".zip"):
+        console.print(f"[dim]Extracting archive {target}...[/dim]")
+        temp_zip_dir = extract_zip_archive(target)
+        actual_target = temp_zip_dir
+
+    manager = WorkspaceManager(actual_target)
     
     try:
         repo_path = manager.setup_workspace()
@@ -335,6 +355,8 @@ def chat_cmd(
         console.print(f"[bold red]Error in chat session:[/bold red] {e}")
     finally:
         manager.cleanup()
+        if temp_zip_dir and os.path.exists(temp_zip_dir):
+            shutil.rmtree(temp_zip_dir)
 
 
 if __name__ == "__main__":

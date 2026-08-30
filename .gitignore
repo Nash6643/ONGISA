@@ -28,3 +28,5 @@ out/
 # Forge Temp Files
 /tmp/
 EOF
+
+*.zip
