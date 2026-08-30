@@ -2,9 +2,10 @@
 
 import React, { useState } from 'react';
 import DependencyGraph from '@/components/DependencyGraph';
+import ZipUploader from "@/components/ZipUploader";
 
 export default function Home() {
-  const [activeTab, setActiveTab] = useState<'topology' | 'refactor'>('topology');
+  const [activeTab, setActiveTab] = useState<'topology' | 'uploader' | 'refactor'>('topology');
   const [isRefactoring, setIsRefactoring] = useState(false);
   const [refactorLog, setRefactorLog] = useState<string | null>(null);
 
@@ -31,12 +32,12 @@ export default function Home() {
       <div className="max-w-7xl mx-auto space-y-6">
         <header className="border-b border-gray-800 pb-4 flex justify-between items-end">
           <div>
-          <h1 className="text-3xl font-bold tracking-tight text-white">
-  ONGISA Architecture Dashboard
-</h1>
-<p className="text-sm text-gray-400 mt-1">
-  Omar Nashiru-deen GitHub Statistical Analyzer — Static analysis & symbol tree mapping.
-</p>
+            <h1 className="text-3xl font-bold tracking-tight text-white">
+              ONGISA Architecture Dashboard
+            </h1>
+            <p className="text-sm text-gray-400 mt-1">
+              Omar Nashiru-deen GitHub Statistical Analyzer — Static analysis & symbol tree mapping.
+            </p>
           </div>
           <div className="flex gap-2">
             <button
@@ -48,6 +49,16 @@ export default function Home() {
               }`}
             >
               Topology Graph
+            </button>
+            <button
+              onClick={() => setActiveTab('uploader')}
+              className={`px-4 py-2 rounded-lg font-medium text-sm transition ${
+                activeTab === 'uploader'
+                  ? 'bg-cyan-600 text-white'
+                  : 'bg-gray-900 text-gray-400 border border-gray-800 hover:text-white'
+              }`}
+            >
+              Zip Analyzer
             </button>
             <button
               onClick={() => setActiveTab('refactor')}
@@ -62,9 +73,15 @@ export default function Home() {
           </div>
         </header>
 
-        {activeTab === 'topology' ? (
-          <DependencyGraph />
-        ) : (
+        {activeTab === 'topology' && <DependencyGraph />}
+
+        {activeTab === 'uploader' && (
+          <div className="py-4">
+            <ZipUploader />
+          </div>
+        )}
+
+        {activeTab === 'refactor' && (
           <div className="bg-gray-900 border border-gray-800 rounded-xl p-6 space-y-4">
             <div className="flex justify-between items-center">
               <div>
