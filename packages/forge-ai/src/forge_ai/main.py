@@ -6,8 +6,9 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from forge_core.zip_handler import extract_zip_archive
 from forge_core.schemas import FileNode
+from forge_analyzer.parser import build_dependency_graph
 
-app = FastAPI(title="ONGISA API Engine")
+app = FastAPI(title="Forge API Engine")
 
 app.add_middleware(
     CORSMiddleware,
@@ -36,7 +37,7 @@ async def analyze_zip_upload(file: UploadFile = File(...)):
             dirs[:] = [d for d in dirs if d not in {".git", "__pycache__", "node_modules", ".venv", "venv"}]
             for f in files:
                 full_path = os.path.join(root, f)
-                rel_path = os.path.relpath(full_path, extracted_dir)
+                rel_path = os.path.relpath(full_path, extracted_dir).replace("\\", "/")
                 ext = os.path.splitext(f)[1].lower()
 
                 files_data.append(
@@ -50,10 +51,13 @@ async def analyze_zip_upload(file: UploadFile = File(...)):
                     )
                 )
 
+        graph_data = build_dependency_graph(extracted_dir)
+
         return {
             "status": "success",
             "filename": file.filename,
             "total_files": len(files_data),
+            "graph": graph_data,
             "issues": []
         }
 
