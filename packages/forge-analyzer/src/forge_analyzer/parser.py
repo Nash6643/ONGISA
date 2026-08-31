@@ -1,116 +1,87 @@
-from tree_sitter import Language, Parser
-import tree_sitter_python as tspython
-import tree_sitter_typescript as tstypescript
-import tree_sitter_rust as tsrust
-from typing import List, Tuple
-from forge_core.schemas import SymbolNode, ImportNode
+import os
+import re
+from typing import Dict, List, Set, Any
 
-class CodeParser:
-    def __init__(self):
-        self.py_parser = Parser(Language(tspython.language()))
-        self.ts_parser = Parser(Language(tstypescript.language_typescript()))
-        self.tsx_parser = Parser(Language(tstypescript.language_tsx()))
-        self.rs_parser = Parser(Language(tsrust.language()))
+PYTHON_IMPORT_RE = re.compile(
+    r'^\s*(?:from\s+([\w\.]+)\s+import|import\s+([\w\.,\s]+))', re.MULTILINE
+)
+JS_TS_IMPORT_RE = re.compile(
+    r'^\s*(?:import\s+.*?from\s+[\'"](.*?)[\'"]|require\([\'"](.*?)[\'"]\))', re.MULTILINE
+)
+RUST_USE_RE = re.compile(
+    r'^\s*(?:use\s+([\w:]+)|mod\s+(\w+));', re.MULTILINE
+)
 
-    def parse_python_file(self, file_path: str, content: str) -> Tuple[List[SymbolNode], List[ImportNode]]:
-        tree = self.py_parser.parse(bytes(content, "utf-8"))
-        symbols = []
-        imports = []
+def parse_imports(file_path: str, ext: str) -> List[str]:
+    imports = []
+    try:
+        with open(file_path, "r", encoding="utf-8", errors="ignore") as f:
+            content = f.read()
 
-        query_str = """
-            (function_definition name: (identifier) @func.name) @func.def
-            (class_definition name: (identifier) @class.name) @class.def
-            (import_statement) @imp
-            (import_from_statement) @imp_from
-        """
-        query = Language(tspython.language()).query(query_str)
-        captures = query.captures(tree.root_node)
+        if ext == ".py":
+            matches = PYTHON_IMPORT_RE.findall(content)
+            for mod_from, mod_imp in matches:
+                if mod_from:
+                    imports.append(mod_from.split(".")[0])
+                if mod_imp:
+                    for item in mod_imp.split(","):
+                        imports.append(item.strip().split(".")[0])
 
-        for node, tag in captures:
-            if tag in ["func.name", "class.name"]:
-                symbols.append(
-                    SymbolNode(
-                        name=node.text.decode("utf-8"),
-                        kind="function" if tag == "func.name" else "class",
-                        line_number=node.start_point[0] + 1
-                    )
-                )
-            elif tag in ["imp", "imp_from"]:
-                imports.append(
-                    ImportNode(
-                        module=node.text.decode("utf-8").strip(),
-                        imported_symbols=[]
-                    )
-                )
+        elif ext in [".js", ".jsx", ".ts", ".tsx"]:
+            matches = JS_TS_IMPORT_RE.findall(content)
+            for imp_from, req_from in matches:
+                target = imp_from or req_from
+                if target:
+                    imports.append(target)
 
-        return symbols, imports
+        elif ext == ".rs":
+            matches = RUST_USE_RE.findall(content)
+            for use_path, mod_name in matches:
+                target = use_path or mod_name
+                if target:
+                    imports.append(target.split("::")[0])
 
-    def parse_typescript_file(self, file_path: str, content: str, is_tsx: bool = False) -> Tuple[List[SymbolNode], List[ImportNode]]:
-        lang = Language(tstypescript.language_tsx() if is_tsx else tstypescript.language_typescript())
-        parser = self.tsx_parser if is_tsx else self.ts_parser
-        tree = parser.parse(bytes(content, "utf-8"))
-        symbols = []
-        imports = []
+    except Exception:
+        pass
 
-        query_str = """
-            (function_declaration name: (identifier) @func.name)
-            (class_declaration name: (type_identifier) @class.name)
-            (interface_declaration name: (type_identifier) @interface.name)
-            (import_statement) @imp
-        """
-        query = lang.query(query_str)
-        captures = query.captures(tree.root_node)
+    return list(set(imports))
 
-        for node, tag in captures:
-            if tag in ["func.name", "class.name", "interface.name"]:
-                kind = "function" if tag == "func.name" else ("class" if tag == "class.name" else "interface")
-                symbols.append(
-                    SymbolNode(
-                        name=node.text.decode("utf-8"),
-                        kind=kind,
-                        line_number=node.start_point[0] + 1
-                    )
-                )
-            elif tag == "imp":
-                imports.append(
-                    ImportNode(
-                        module=node.text.decode("utf-8").strip(),
-                        imported_symbols=[]
-                    )
-                )
+def build_dependency_graph(root_dir: str) -> Dict[str, Any]:
+    nodes = []
+    edges = []
+    file_map: Dict[str, str] = {}
 
-        return symbols, imports
+    for root, dirs, files in os.walk(root_dir):
+        dirs[:] = [d for d in dirs if d not in {".git", "__pycache__", "node_modules", ".venv", "venv", "dist", "build"}]
+        for f in files:
+            full_path = os.path.join(root, f)
+            rel_path = os.path.relpath(full_path, root_dir).replace("\\", "/")
+            ext = os.path.splitext(f)[1].lower()
 
-    def parse_rust_file(self, file_path: str, content: str) -> Tuple[List[SymbolNode], List[ImportNode]]:
-        tree = self.rs_parser.parse(bytes(content, "utf-8"))
-        symbols = []
-        imports = []
+            nodes.append({
+                "id": rel_path,
+                "label": f,
+                "extension": ext,
+                "path": rel_path
+            })
+            file_map[rel_path] = full_path
 
-        query_str = """
-            (function_item name: (identifier) @func.name)
-            (struct_item name: (type_identifier) @struct.name)
-            (enum_item name: (type_identifier) @enum.name)
-            (use_declaration) @use
-        """
-        query = Language(tsrust.language()).query(query_str)
-        captures = query.captures(tree.root_node)
+    for node in nodes:
+        source_id = node["id"]
+        full_path = file_map[source_id]
+        ext = node["extension"]
+        detected_imports = parse_imports(full_path, ext)
 
-        for node, tag in captures:
-            if tag in ["func.name", "struct.name", "enum.name"]:
-                kind = "function" if tag == "func.name" else ("struct" if tag == "struct.name" else "enum")
-                symbols.append(
-                    SymbolNode(
-                        name=node.text.decode("utf-8"),
-                        kind=kind,
-                        line_number=node.start_point[0] + 1
-                    )
-                )
-            elif tag == "use":
-                imports.append(
-                    ImportNode(
-                        module=node.text.decode("utf-8").strip(),
-                        imported_symbols=[]
-                    )
-                )
+        for imp in detected_imports:
+            for target_node in nodes:
+                target_id = target_node["id"]
+                if target_id != source_id and (imp in target_id or target_id.endswith(f"/{imp}{ext}")):
+                    edges.append({
+                        "source": source_id,
+                        "target": target_id
+                    })
 
-        return symbols, imports
+    return {
+        "nodes": nodes,
+        "edges": edges
+    }
