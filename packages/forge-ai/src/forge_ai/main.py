@@ -7,6 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from forge_core.zip_handler import extract_zip_archive
 from forge_core.schemas import FileNode
 from forge_analyzer.parser import build_dependency_graph
+from forge_analyzer.smells import analyze_code_smells
 
 app = FastAPI(title="Forge API Engine")
 
@@ -52,7 +53,8 @@ async def analyze_zip_upload(file: UploadFile = File(...)):
                 )
 
         graph_data = build_dependency_graph(extracted_dir)
-
+        issues_data = analyze_code_smells(graph_data)
+        
         return {
             "status": "success",
             "filename": file.filename,
