@@ -1,23 +1,35 @@
 import { NextResponse } from 'next/server';
-import fs from 'fs';
-import path from 'path';
 
-export async function GET() {
+export async function POST(req: Request) {
   try {
-    // Go up two levels from apps/forge-web to reach C:\Users\Omar\Desktop\forge\graph.json
-    const graphPath = path.resolve(process.cwd(), '..', '..', 'graph.json');
+    const body = await req.json();
+    const { source_code } = body;
 
-    if (!fs.existsSync(graphPath)) {
+    if (!source_code) {
       return NextResponse.json(
-        { error: `graph.json not found at ${graphPath}. Run CLI analysis first.` },
-        { status: 404 }
+        { error: 'source_code parameter is required' },
+        { status: 400 }
       );
     }
 
-    const fileData = fs.readFileSync(graphPath, 'utf8');
-    const graphData = JSON.parse(fileData);
-    return NextResponse.json(graphData);
-  } catch (error) {
-    return NextResponse.json({ error: 'Failed to read graph data' }, { status: 500 });
+    // Call forge-ai FastAPI service running locally or in docker
+    const aiServiceUrl = process.env.FORGE_AI_URL || 'http://127.0.0.1:8000';
+    const response = await fetch(`${aiServiceUrl}/api/refactor/ast`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ source_code }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`AI Service responded with status ${response.status}`);
+    }
+
+    const data = await response.json();
+    return NextResponse.json(data);
+  } catch (err: any) {
+    return NextResponse.json(
+      { error: err.message || 'Failed to trigger AST refactor' },
+      { status: 500 }
+    );
   }
 }
