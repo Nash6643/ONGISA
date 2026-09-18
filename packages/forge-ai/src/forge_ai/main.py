@@ -8,6 +8,8 @@ from forge_core.zip_handler import extract_zip_archive
 from forge_core.schemas import FileNode
 from forge_analyzer.parser import build_dependency_graph
 from forge_analyzer.smells import analyze_code_smells
+from fastapi import Body
+from forge_analyzer.refactor import perform_ast_dry_run
 
 app = FastAPI(title="Forge API Engine")
 
@@ -18,6 +20,7 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
 
 @app.post("/api/analyze/zip")
 async def analyze_zip_upload(file: UploadFile = File(...)):
@@ -30,15 +33,30 @@ async def analyze_zip_upload(file: UploadFile = File(...)):
         tmp_zip_path = tmp_file.name
 
     extracted_dir = None
+
     try:
         extracted_dir = extract_zip_archive(tmp_zip_path)
         files_data = []
 
         for root, dirs, files in os.walk(extracted_dir):
-            dirs[:] = [d for d in dirs if d not in {".git", "__pycache__", "node_modules", ".venv", "venv"}]
+            dirs[:] = [
+                d for d in dirs
+                if d not in {
+                    ".git",
+                    "__pycache__",
+                    "node_modules",
+                    ".venv",
+                    "venv"
+                }
+            ]
+
             for f in files:
                 full_path = os.path.join(root, f)
-                rel_path = os.path.relpath(full_path, extracted_dir).replace("\\", "/")
+                rel_path = os.path.relpath(
+                    full_path,
+                    extracted_dir
+                ).replace("\\", "/")
+
                 ext = os.path.splitext(f)[1].lower()
 
                 files_data.append(
@@ -47,14 +65,23 @@ async def analyze_zip_upload(file: UploadFile = File(...)):
                         name=f,
                         extension=ext,
                         size_bytes=os.path.getsize(full_path),
-                        language="Supported" if ext in [".py", ".ts", ".tsx", ".js", ".rs", ".java"] else "Other",
+                        language="Supported"
+                        if ext in [
+                            ".py",
+                            ".ts",
+                            ".tsx",
+                            ".js",
+                            ".rs",
+                            ".java"
+                        ]
+                        else "Other",
                         symbols=[]
                     )
                 )
 
         graph_data = build_dependency_graph(extracted_dir)
         issues_data = analyze_code_smells(graph_data)
-        
+
         return {
             "status": "success",
             "filename": file.filename,
@@ -66,5 +93,20 @@ async def analyze_zip_upload(file: UploadFile = File(...)):
     finally:
         if os.path.exists(tmp_zip_path):
             os.remove(tmp_zip_path)
+
         if extracted_dir and os.path.exists(extracted_dir):
             shutil.rmtree(extracted_dir)
+
+
+@app.post("/api/refactor/ast")
+async def refactor_ast_endpoint(payload: dict = Body(...)):
+    source_code = payload.get("source_code", "")
+
+    if not source_code.strip():
+        return {
+            "status": "error",
+            "message": "No source code provided for AST refactoring."
+        }
+
+    result = perform_ast_dry_run(source_code)
+    return result
