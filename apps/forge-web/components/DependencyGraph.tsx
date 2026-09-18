@@ -1,212 +1,135 @@
-"use client";
+'use client';
 
-import React, { useState, useMemo } from "react";
+import React, { useMemo, useState } from 'react';
+import ReactFlow, {
+  Background,
+  Controls,
+  MiniMap,
+  Node,
+  Edge,
+  useNodesState,
+  useEdgesState,
+  MarkerType,
+} from 'reactflow';
+import 'reactflow/dist/style.css';
 
-export interface GraphNode {
-  id: string;
-  name?: string;
-  sizeBytes?: number;
-  symbolCount?: number;
-  language?: string;
-  type?: string;
+interface GraphDataProps {
+  initialNodes?: Array<{ id: string; label: string; extension: string; path: string }>;
+  initialEdges?: Array<{ source: string; target: string }>;
 }
 
-export interface GraphEdge {
-  source: string;
-  target: string;
-  relation?: string;
-}
+export default function DependencyGraph({ initialNodes = [], initialEdges = [] }: GraphDataProps) {
+  const [selectedNode, setSelectedNode] = useState<any | null>(null);
 
-export interface DependencyGraphProps {
-  nodes?: GraphNode[];
-  edges?: GraphEdge[];
-  onSelectNode?: (nodeId: string) => void;
-}
+  // Convert raw API graph data into React Flow nodes with grid layout
+  const formattedNodes: Node[] = useMemo(() => {
+    if (!initialNodes.length) {
+      // Fallback demo topology nodes if no zip is loaded yet
+      return [
+        { id: '1', data: { label: 'forge_ai/main.py' }, position: { x: 250, y: 50 }, style: { background: '#0f172a', color: '#38bdf8', border: '1px solid #0284c7', borderRadius: '8px', padding: '10px' } },
+        { id: '2', data: { label: 'forge_core/zip_handler.py' }, position: { x: 100, y: 200 }, style: { background: '#0f172a', color: '#34d399', border: '1px solid #059669', borderRadius: '8px', padding: '10px' } },
+        { id: '3', data: { label: 'forge_analyzer/parser.py' }, position: { x: 400, y: 200 }, style: { background: '#0f172a', color: '#a78bfa', border: '1px solid #7c3aed', borderRadius: '8px', padding: '10px' } },
+      ];
+    }
 
-export const DependencyGraph: React.FC<DependencyGraphProps> = ({
-  nodes = [],
-  edges = [],
-  onSelectNode,
-}) => {
-  // Filter States
-  const [minFileSize, setMinFileSize] = useState<number>(0);
-  const [minSymbolCount, setMinSymbolCount] = useState<number>(0);
-  const [selectedLang, setSelectedLang] = useState<string>("ALL");
-  const [searchQuery, setSearchQuery] = useState<string>("");
+    const cols = Math.ceil(Math.sqrt(initialNodes.length));
+    return initialNodes.map((n, idx) => ({
+      id: n.id,
+      data: { label: n.label, path: n.path, extension: n.extension },
+      position: {
+        x: (idx % cols) * 220 + 50,
+        y: Math.floor(idx / cols) * 120 + 50,
+      },
+      style: {
+        background: '#090d16',
+        color: '#f3f4f6',
+        border: '1px solid #1f2937',
+        borderRadius: '8px',
+        fontSize: '12px',
+        padding: '8px 12px',
+        width: 180,
+      },
+    }));
+  }, [initialNodes]);
 
-  // Calculate dynamic languages
-  const availableLanguages = useMemo(() => {
-    const langs = new Set<string>();
-    nodes.forEach((n) => {
-      if (n.language) langs.add(n.language);
-    });
-    return ["ALL", ...Array.from(langs)];
-  }, [nodes]);
+  const formattedEdges: Edge[] = useMemo(() => {
+    if (!initialEdges.length) {
+      return [
+        { id: 'e1-2', source: '1', target: '2', animated: true, markerEnd: { type: MarkerType.ArrowClosed } },
+        { id: 'e1-3', source: '1', target: '3', animated: true, markerEnd: { type: MarkerType.ArrowClosed } },
+      ];
+    }
 
-  // Max bounds for sliders
-  const maxFileSize = useMemo(() => {
-    return nodes.reduce((max, n) => Math.max(max, n.sizeBytes || 0), 10000);
-  }, [nodes]);
+    return initialEdges.map((e, idx) => ({
+      id: `e-${idx}`,
+      source: e.source,
+      target: e.target,
+      animated: true,
+      style: { stroke: '#0284c7', strokeWidth: 1.5 },
+      markerEnd: { type: MarkerType.ArrowClosed, color: '#0284c7' },
+    }));
+  }, [initialEdges]);
 
-  const maxSymbols = useMemo(() => {
-    return nodes.reduce((max, n) => Math.max(max, n.symbolCount || 0), 20);
-  }, [nodes]);
+  const [nodes, , onNodesChange] = useNodesState(formattedNodes);
+  const [edges, , onEdgesChange] = useEdgesState(formattedEdges);
 
-  // Compute Filtered Nodes & Edges
-  const { filteredNodes, filteredEdges } = useMemo(() => {
-    const activeIds = new Set<string>();
-
-    const filteredN = nodes.filter((node) => {
-      const nodeSize = node.sizeBytes || 0;
-      const nodeSymbols = node.symbolCount || 0;
-      const nodeLang = node.language || "Unknown";
-
-      const matchesSize = nodeSize >= minFileSize;
-      const matchesSymbols = nodeSymbols >= minSymbolCount;
-      const matchesLang =
-        selectedLang === "ALL" || nodeLang.toLowerCase() === selectedLang.toLowerCase();
-      const matchesSearch =
-        !searchQuery ||
-        node.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        (node.name && node.name.toLowerCase().includes(searchQuery.toLowerCase()));
-
-      const passes = matchesSize && matchesSymbols && matchesLang && matchesSearch;
-      if (passes) {
-        activeIds.add(node.id);
-      }
-      return passes;
-    });
-
-    // Prune edges pointing to/from filtered nodes
-    const filteredE = edges.filter(
-      (e) => activeIds.has(e.source) && activeIds.has(e.target)
-    );
-
-    return { filteredNodes: filteredN, filteredEdges: filteredE };
-  }, [nodes, edges, minFileSize, minSymbolCount, selectedLang, searchQuery]);
+  const handleNodeClick = (_: React.MouseEvent, node: Node) => {
+    setSelectedNode(node);
+  };
 
   return (
-    <div className="flex flex-col w-full h-full bg-slate-900 border border-slate-800 rounded-xl overflow-hidden shadow-xl">
-      {/* Control Bar Header */}
-      <div className="p-4 bg-slate-800/80 backdrop-blur border-b border-slate-700/60 flex flex-col gap-3">
-        <div className="flex items-center justify-between">
-          <h3 className="text-sm font-semibold text-slate-200 flex items-center gap-2">
-            <span className="w-2.5 h-2.5 rounded-full bg-cyan-400 animate-pulse" />
-            Dependency Topology Controls
-          </h3>
-          <span className="text-xs text-slate-400 font-mono">
-            Showing <strong className="text-cyan-400">{filteredNodes.length}</strong> / {nodes.length} nodes (
-            <strong className="text-cyan-400">{filteredEdges.length}</strong> edges)
-          </span>
-        </div>
-
-        {/* Filter Sliders and Inputs */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
-          {/* File Search */}
-          <div className="flex flex-col gap-1">
-            <label className="text-xs font-medium text-slate-400">Search Module</label>
-            <input
-              type="text"
-              placeholder="Filter by path..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="bg-slate-900 border border-slate-700 rounded px-2.5 py-1 text-xs text-slate-200 focus:outline-none focus:border-cyan-500 transition-colors"
-            />
-          </div>
-
-          {/* Min Size Slider */}
-          <div className="flex flex-col gap-1">
-            <div className="flex justify-between text-xs font-medium text-slate-400">
-              <span>Min Size</span>
-              <span className="text-cyan-400 font-mono">
-                {(minFileSize / 1024).toFixed(1)} KB
-              </span>
-            </div>
-            <input
-              type="range"
-              min={0}
-              max={maxFileSize}
-              step={100}
-              value={minFileSize}
-              onChange={(e) => setMinFileSize(Number(e.target.value))}
-              className="accent-cyan-500 cursor-pointer h-1.5 bg-slate-700 rounded-lg appearance-none mt-1"
-            />
-          </div>
-
-          {/* Min Symbols Slider */}
-          <div className="flex flex-col gap-1">
-            <div className="flex justify-between text-xs font-medium text-slate-400">
-              <span>Min Symbols</span>
-              <span className="text-cyan-400 font-mono">{minSymbolCount}</span>
-            </div>
-            <input
-              type="range"
-              min={0}
-              max={maxSymbols}
-              step={1}
-              value={minSymbolCount}
-              onChange={(e) => setMinSymbolCount(Number(e.target.value))}
-              className="accent-cyan-500 cursor-pointer h-1.5 bg-slate-700 rounded-lg appearance-none mt-1"
-            />
-          </div>
-
-          {/* Language Select */}
-          <div className="flex flex-col gap-1">
-            <label className="text-xs font-medium text-slate-400">Language</label>
-            <select
-              value={selectedLang}
-              onChange={(e) => setSelectedLang(e.target.value)}
-              className="bg-slate-900 border border-slate-700 rounded px-2 py-1 text-xs text-slate-200 focus:outline-none focus:border-cyan-500 transition-colors cursor-pointer"
-            >
-              {availableLanguages.map((lang) => (
-                <option key={lang} value={lang}>
-                  {lang}
-                </option>
-              ))}
-            </select>
-          </div>
-        </div>
+    <div className="flex gap-4 h-[600px] w-full">
+      <div className="flex-1 bg-gray-950 border border-gray-800 rounded-xl overflow-hidden relative">
+        <ReactFlow
+          nodes={nodes}
+          edges={edges}
+          onNodesChange={onNodesChange}
+          onEdgesChange={onEdgesChange}
+          onNodeClick={handleNodeClick}
+          fitView
+        >
+          <Background color="#1e293b" gap={16} />
+          <Controls className="bg-gray-900 border-gray-800 text-white fill-white" />
+          <MiniMap nodeColor="#0284c7" maskColor="rgba(15, 23, 42, 0.7)" className="bg-gray-900 border-gray-800" />
+        </ReactFlow>
       </div>
 
-      {/* Graph Visualizer / List View Area */}
-      <div className="relative flex-1 min-h-[450px] p-4 bg-slate-950 overflow-auto">
-        {filteredNodes.length === 0 ? (
-          <div className="h-full w-full flex flex-col items-center justify-center text-slate-500 text-sm gap-2">
-            <svg className="w-8 h-8 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-            </svg>
-            No nodes match the selected criteria. Try easing the filters.
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-            {filteredNodes.map((node) => (
-              <div
-                key={node.id}
-                onClick={() => onSelectNode && onSelectNode(node.id)}
-                className="p-3 bg-slate-900/90 border border-slate-800 rounded-lg hover:border-cyan-500/50 hover:bg-slate-800/60 cursor-pointer transition-all flex flex-col justify-between gap-2 group"
-              >
-                <div className="truncate">
-                  <p className="text-xs font-mono text-cyan-400 group-hover:text-cyan-300 truncate">
-                    {node.name || node.id}
-                  </p>
-                  <p className="text-[10px] text-slate-500 font-mono truncate">{node.id}</p>
-                </div>
-                <div className="flex items-center justify-between text-[11px] text-slate-400 pt-2 border-t border-slate-800/80">
-                  <span>{( (node.sizeBytes || 0) / 1024 ).toFixed(1)} KB</span>
-                  <span>{node.symbolCount || 0} symbols</span>
-                  {node.language && (
-                    <span className="px-1.5 py-0.5 rounded bg-slate-800 text-slate-300 text-[10px]">
-                      {node.language}
-                    </span>
-                  )}
-                </div>
+      {/* Selected Node Details Drawer */}
+      <div className="w-80 bg-gray-900 border border-gray-800 rounded-xl p-4 flex flex-col justify-between">
+        <div>
+          <h3 className="text-sm font-semibold text-cyan-400 uppercase tracking-wider mb-3">
+            Node Inspector
+          </h3>
+          {selectedNode ? (
+            <div className="space-y-3 font-mono text-xs">
+              <div>
+                <span className="text-gray-500 block">Identifier:</span>
+                <span className="text-gray-200 break-all">{selectedNode.id}</span>
               </div>
-            ))}
-          </div>
-        )}
+              <div>
+                <span className="text-gray-500 block">File Name:</span>
+                <span className="text-gray-200">{selectedNode.data.label}</span>
+              </div>
+              {selectedNode.data.path && (
+                <div>
+                  <span className="text-gray-500 block">Relative Path:</span>
+                  <span className="text-gray-200 break-all">{selectedNode.data.path}</span>
+                </div>
+              )}
+            </div>
+          ) : (
+            <p className="text-xs text-gray-500 italic">
+              Click any node on the canvas to inspect file relationships and dependency properties.
+            </p>
+          )}
+        </div>
+
+        <div className="pt-4 border-t border-gray-800">
+          <p className="text-[10px] text-gray-500 uppercase tracking-widest">
+            ONGISA Graph Engine v0.1.0
+          </p>
+        </div>
       </div>
     </div>
   );
-};
-
-export default DependencyGraph;
+}

@@ -2,12 +2,19 @@
 
 import React, { useState } from 'react';
 import DependencyGraph from '@/components/DependencyGraph';
-import ZipUploader from '@/components/ZipUploader';
+import { UploadDropzone } from '@/components/UploadDropzone';
+import { AnalysisResult } from '@/lib/api';
 
 export default function Home() {
   const [activeTab, setActiveTab] = useState<'topology' | 'uploader' | 'refactor'>('topology');
+  const [analysisResult, setAnalysisResult] = useState<AnalysisResult | null>(null);
   const [isRefactoring, setIsRefactoring] = useState(false);
   const [refactorLog, setRefactorLog] = useState<string | null>(null);
+
+  const handleAnalysisComplete = (result: AnalysisResult) => {
+    setAnalysisResult(result);
+    setActiveTab('topology');
+  };
 
   const runRefactorDryRun = async () => {
     setIsRefactoring(true);
@@ -20,7 +27,7 @@ export default function Home() {
       });
       const data = await res.json();
       setRefactorLog(data.output || data.error || 'Refactor completed.');
-    } catch (err) {
+    } catch {
       setRefactorLog('Error executing refactoring engine.');
     } finally {
       setIsRefactoring(false);
@@ -73,11 +80,16 @@ export default function Home() {
           </div>
         </header>
 
-        {activeTab === 'topology' && <DependencyGraph />}
+        {activeTab === 'topology' && (
+          <DependencyGraph
+            initialNodes={analysisResult?.graph.nodes}
+            initialEdges={analysisResult?.graph.edges}
+          />
+        )}
 
         {activeTab === 'uploader' && (
           <div className="py-4">
-            <ZipUploader />
+            <UploadDropzone onAnalysisComplete={handleAnalysisComplete} />
           </div>
         )}
 
