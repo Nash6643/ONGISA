@@ -87,6 +87,66 @@ export default function Home() {
           />
         )}
 
+{activeTab === 'refactor' && (
+  <div className="bg-gray-900 border border-gray-800 rounded-xl p-6 space-y-6">
+    <div className="flex justify-between items-center border-b border-gray-800 pb-4">
+      <div>
+        <h2 className="text-xl font-bold text-cyan-400">Architectural Issues & AST Refactoring</h2>
+        <p className="text-sm text-gray-400">
+          Detected circular imports, high coupling, and god modules across scanned codebases.
+        </p>
+      </div>
+      <button
+        onClick={runRefactorDryRun}
+        disabled={isRefactoring}
+        className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-sm font-semibold transition disabled:opacity-50"
+      >
+        {isRefactoring ? 'Analyzing Codebase...' : 'Run Dry-Run Refactor'}
+      </button>
+    </div>
+
+    {/* Detected Code Smells List */}
+    <div className="space-y-3">
+      <h3 className="text-xs font-semibold uppercase text-gray-400 tracking-wider">Detected Code Smells</h3>
+      {analysisResult?.issues && analysisResult.issues.length > 0 ? (
+        <div className="grid gap-3">
+          {analysisResult.issues.map((issue, idx) => (
+            <div
+              key={idx}
+              className={`p-4 rounded-lg border ${
+                issue.severity === 'high'
+                  ? 'bg-red-950/30 border-red-800 text-red-200'
+                  : 'bg-amber-950/30 border-amber-800 text-amber-200'
+              }`}
+            >
+              <div className="flex items-center justify-between">
+                <span className="font-mono text-xs uppercase px-2 py-0.5 rounded bg-black/40">
+                  {issue.type}
+                </span>
+                <span className="text-xs font-semibold capitalize">{issue.severity} severity</span>
+              </div>
+              <p className="text-sm mt-2 font-mono">{issue.description}</p>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <p className="text-xs text-gray-500 italic">
+          No architectural code smells detected yet. Upload a repository .zip file in the Zip Analyzer tab to run detection.
+        </p>
+      )}
+    </div>
+
+    {/* Dry Run Output Console */}
+    <div className="bg-gray-950 border border-gray-800 rounded-lg p-4 font-mono text-xs max-h-96 overflow-y-auto">
+      {refactorLog ? (
+        <pre className="text-emerald-400 whitespace-pre-wrap">{refactorLog}</pre>
+      ) : (
+        <p className="text-gray-600">Click "Run Dry-Run Refactor" to preview AST code transformations...</p>
+      )}
+    </div>
+  </div>
+)}
+
         {activeTab === 'uploader' && (
           <div className="py-4">
             <UploadDropzone onAnalysisComplete={handleAnalysisComplete} />
