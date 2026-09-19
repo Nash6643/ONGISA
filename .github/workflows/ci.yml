@@ -7,55 +7,46 @@ on:
     branches: [ main ]
 
 jobs:
-  python-test:
-    name: Python Engine Tests
+  test-python:
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout Code
+      - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Set up Python 3.11
+      - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: "3.11"
+          python-version: '3.11'
 
-      - name: Install Python Dependencies
+      - name: Install Python Packages & Test Dependencies
         run: |
-          python -m pip install --upgrade pip setuptools wheel
-          pip install pytest pytest-cov
-          pip install -e packages/forge-core || true
-          pip install -e packages/forge-analyzer || true
-          pip install -e packages/forge-ai || true
-          pip install -e packages/forge-refactor || true
-          pip install -e CLI/forge-cli || true
+          python -m pip install --upgrade pip
+          pip install pytest httpx fastapi uvicorn python-multipart
+          pip install -e ./packages/forge-core
+          pip install -e ./packages/forge-analyzer
+          pip install -e ./packages/forge-ai
 
-      - name: Run Pytest
+      - name: Run Pytest Suite
         env:
-          PYTHONPATH: "packages/forge-refactor/src:packages/forge-analyzer/src:packages/forge-core/src:packages/forge-ai/src"
+          PYTHONPATH: "packages/forge-core/src;packages/forge-analyzer/src;packages/forge-ai/src"
         run: |
-          pytest --ignore=node_modules --ignore=apps/forge-web || true
+          pytest packages/forge-core/tests packages/forge-analyzer/tests packages/forge-ai/tests
 
-  nextjs-build:
-    name: Next.js Web Dashboard Build
+  build-web:
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout Code
+      - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Set up Node.js 20
+      - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: apps/forge-web/package-lock.json
 
-      - name: Install Node Dependencies
-        working-directory: apps/forge-web
-        run: npm install
+      - name: Install Frontend Dependencies
+        run: npm ci --prefix apps/forge-web
 
-      - name: Build Web Application
-        working-directory: apps/forge-web
-        env:
-          GEMINI_API_KEY: "dummy_key_for_ci_build"
-          NEXT_TELEMETRY_DISABLED: 1
-        run: npm run build
+      - name: Build Next.js Web App
+        run: npm run build --prefix apps/forge-web
