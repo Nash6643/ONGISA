@@ -28,7 +28,7 @@ jobs:
 
       - name: Run Pytest Suite
         env:
-          PYTHONPATH: "packages/forge-core/src;packages/forge-analyzer/src;packages/forge-ai/src"
+          PYTHONPATH: "${{ github.workspace }}/packages/forge-core/src:${{ github.workspace }}/packages/forge-analyzer/src:${{ github.workspace }}/packages/forge-ai/src"
         run: |
           pytest packages/forge-core/tests packages/forge-analyzer/tests packages/forge-ai/tests
 
