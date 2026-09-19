@@ -12,6 +12,7 @@ import ReactFlow, {
   MarkerType,
 } from 'reactflow';
 import 'reactflow/dist/style.css';
+import RefactorModal from './RefactorModal';
 
 interface GraphDataProps {
   initialNodes?: Array<{ id: string; label: string; extension: string; path: string }>;
@@ -20,11 +21,10 @@ interface GraphDataProps {
 
 export default function DependencyGraph({ initialNodes = [], initialEdges = [] }: GraphDataProps) {
   const [selectedNode, setSelectedNode] = useState<any | null>(null);
+  const [isRefactorModalOpen, setIsRefactorModalOpen] = useState(false);
 
-  // Convert raw API graph data into React Flow nodes with grid layout
   const formattedNodes: Node[] = useMemo(() => {
     if (!initialNodes.length) {
-      // Fallback demo topology nodes if no zip is loaded yet
       return [
         { id: '1', data: { label: 'forge_ai/main.py' }, position: { x: 250, y: 50 }, style: { background: '#0f172a', color: '#38bdf8', border: '1px solid #0284c7', borderRadius: '8px', padding: '10px' } },
         { id: '2', data: { label: 'forge_core/zip_handler.py' }, position: { x: 100, y: 200 }, style: { background: '#0f172a', color: '#34d399', border: '1px solid #059669', borderRadius: '8px', padding: '10px' } },
@@ -101,7 +101,7 @@ export default function DependencyGraph({ initialNodes = [], initialEdges = [] }
             Node Inspector
           </h3>
           {selectedNode ? (
-            <div className="space-y-3 font-mono text-xs">
+            <div className="space-y-4 font-mono text-xs">
               <div>
                 <span className="text-gray-500 block">Identifier:</span>
                 <span className="text-gray-200 break-all">{selectedNode.id}</span>
@@ -110,16 +110,16 @@ export default function DependencyGraph({ initialNodes = [], initialEdges = [] }
                 <span className="text-gray-500 block">File Name:</span>
                 <span className="text-gray-200">{selectedNode.data.label}</span>
               </div>
-              {selectedNode.data.path && (
-                <div>
-                  <span className="text-gray-500 block">Relative Path:</span>
-                  <span className="text-gray-200 break-all">{selectedNode.data.path}</span>
-                </div>
-              )}
+              <button
+                onClick={() => setIsRefactorModalOpen(true)}
+                className="w-full py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-sans font-semibold rounded-lg transition-colors mt-2"
+              >
+                Refactor File AST
+              </button>
             </div>
           ) : (
             <p className="text-xs text-gray-500 italic">
-              Click any node on the canvas to inspect file relationships and dependency properties.
+              Click any node on the canvas to inspect file relationships and trigger AST refactoring.
             </p>
           )}
         </div>
@@ -130,6 +130,16 @@ export default function DependencyGraph({ initialNodes = [], initialEdges = [] }
           </p>
         </div>
       </div>
+
+      {/* Refactor Modal */}
+      {selectedNode && (
+        <RefactorModal
+          isOpen={isRefactorModalOpen}
+          onClose={() => setIsRefactorModalOpen(false)}
+          fileName={selectedNode.data.label}
+          initialCode={`# Sample AST source placeholder for ${selectedNode.data.label}\ndef analyze_module():\n    x = 100\n    return x`}
+        />
+      )}
     </div>
   );
 }
