@@ -1,0 +1,13 @@
+FROM python:3.13-slim
+
+WORKDIR /app
+
+# Copy workspace packages
+COPY packages/ packages/
+
+# Install core, analyzer, ai packages along with runtime dependencies
+RUN pip install --no-cache-dir ./packages/forge-core ./packages/forge-analyzer ./packages/forge-ai fastapi uvicorn python-multipart
+
+EXPOSE 8000
+
+CMD ["uvicorn", "forge_ai.main:app", "--host", "0.0.0.0", "--port", "8000"]
