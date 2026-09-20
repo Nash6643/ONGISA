@@ -1,5 +1,7 @@
 import os
 import tempfile
+import shutil
+import subprocess
 
 from git import Repo
 from git.exc import GitCommandError
@@ -72,3 +74,22 @@ class WorkspaceManager:
             self.temp_dir = None
 
         self.repo_path = None
+
+class GitCloner:
+    @staticmethod
+    def clone_repository(repo_url: str) -> str:
+        """Clones a public git repository into a secure temporary directory and returns the path."""
+        temp_dir = tempfile.mkdtemp(prefix="forge_repo_")
+        try:
+            subprocess.run(
+                ["git", "clone", "--depth", "1", repo_url, temp_dir],
+                check=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True
+            )
+            return temp_dir
+        except subprocess.CalledProcessError as e:
+            if os.path.exists(temp_dir):
+                shutil.rmtree(temp_dir, ignore_errors=True)
+            raise RuntimeError(f"Failed to clone repository: {e.stderr.strip()}")
