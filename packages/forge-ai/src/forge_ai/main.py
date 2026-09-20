@@ -5,6 +5,8 @@ import tempfile
 from fastapi import FastAPI, UploadFile, File, HTTPException, Body
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
+from forge_core.cloner import GitCloner
+import shutil
 
 from forge_core.zip_handler import extract_zip_archive
 from forge_core.schemas import FileNode
@@ -128,6 +130,27 @@ async def refactor_ast_endpoint(payload: dict = Body(...)):
     result = perform_ast_dry_run(source_code)
 
     return result
+
+class RepoCloneRequest(BaseModel):
+    repo_url: str
+
+@app.post("/api/analyze/git")
+async def analyze_git_repo(req: RepoCloneRequest):
+    repo_path = None
+    try:
+        repo_path = GitCloner.clone_repository(req.repo_url)
+        # Run your existing analyzer logic over repo_path here...
+        
+        return {
+            "status": "success",
+            "message": f"Successfully cloned and analyzed repository from {req.repo_url}",
+            "repo_path": repo_path
+        }
+    except Exception as e:
+        return {"status": "error", "message": str(e)}, 400
+    finally:
+        # Optional cleanup after analysis if needed, or keep for session
+        pass
 
 
 class ChatQuery(BaseModel):
