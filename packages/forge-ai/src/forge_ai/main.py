@@ -1,16 +1,18 @@
 import os
 import shutil
 import tempfile
-from fastapi import FastAPI, UploadFile, File, HTTPException
+
+from fastapi import FastAPI, UploadFile, File, HTTPException, Body
 from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
 
 from forge_core.zip_handler import extract_zip_archive
 from forge_core.schemas import FileNode
 from forge_analyzer.parser import build_dependency_graph
 from forge_analyzer.smells import analyze_code_smells
-from fastapi import Body
 from forge_analyzer.refactor import perform_ast_dry_run
-from pydantic import BaseModel
+from forge_ai.agent import CodebaseAgent
+
 
 app = FastAPI(title="Forge API Engine")
 
@@ -23,12 +25,22 @@ app.add_middleware(
 )
 
 
+# Initialize the AI architecture agent once when the API starts.
+agent = CodebaseAgent()
+
+
 @app.post("/api/analyze/zip")
 async def analyze_zip_upload(file: UploadFile = File(...)):
     if not file.filename.endswith(".zip"):
-        raise HTTPException(status_code=400, detail="Only .zip files are supported.")
+        raise HTTPException(
+            status_code=400,
+            detail="Only .zip files are supported."
+        )
 
-    with tempfile.NamedTemporaryFile(delete=False, suffix=".zip") as tmp_file:
+    with tempfile.NamedTemporaryFile(
+        delete=False,
+        suffix=".zip"
+    ) as tmp_file:
         content = await file.read()
         tmp_file.write(content)
         tmp_zip_path = tmp_file.name
@@ -41,7 +53,8 @@ async def analyze_zip_upload(file: UploadFile = File(...)):
 
         for root, dirs, files in os.walk(extracted_dir):
             dirs[:] = [
-                d for d in dirs
+                d
+                for d in dirs
                 if d not in {
                     ".git",
                     "__pycache__",
@@ -53,6 +66,7 @@ async def analyze_zip_upload(file: UploadFile = File(...)):
 
             for f in files:
                 full_path = os.path.join(root, f)
+
                 rel_path = os.path.relpath(
                     full_path,
                     extracted_dir
@@ -66,16 +80,18 @@ async def analyze_zip_upload(file: UploadFile = File(...)):
                         name=f,
                         extension=ext,
                         size_bytes=os.path.getsize(full_path),
-                        language="Supported"
-                        if ext in [
-                            ".py",
-                            ".ts",
-                            ".tsx",
-                            ".js",
-                            ".rs",
-                            ".java"
-                        ]
-                        else "Other",
+                        language=(
+                            "Supported"
+                            if ext in [
+                                ".py",
+                                ".ts",
+                                ".tsx",
+                                ".js",
+                                ".rs",
+                                ".java"
+                            ]
+                            else "Other"
+                        ),
                         symbols=[]
                     )
                 )
@@ -88,7 +104,7 @@ async def analyze_zip_upload(file: UploadFile = File(...)):
             "filename": file.filename,
             "total_files": len(files_data),
             "graph": graph_data,
-            "issues": []
+            "issues": issues_data
         }
 
     finally:
@@ -110,36 +126,36 @@ async def refactor_ast_endpoint(payload: dict = Body(...)):
         }
 
     result = perform_ast_dry_run(source_code)
+
     return result
+
+
 class ChatQuery(BaseModel):
     question: str
     codebase_context: dict | None = None
 
+
 @app.post("/api/chat/architecture")
 async def architecture_chat_endpoint(query: ChatQuery):
-    question_lower = query.question.lower()
-    context = query.codebase_context or {}
-    files = context.get("graph", {}).get("nodes", [])
-    issues = context.get("issues", [])
+    """
+    Send architecture questions to Forge AI / Gemini.
+    """
 
-    # Intelligent pattern matching across the parsed codebase metadata
-    answer = ""
-    if "validation" in question_lower or "pydantic" in question_lower:
-        answer = "Data validation is handled primarily via Pydantic schemas in `forge-core/schemas.py` and validated at the FastAPI boundary layers in `forge-ai/main.py`."
-    elif "bottleneck" in question_lower or "smell" in question_lower or "coupling" in question_lower:
-        if issues:
-            high_severity_count = sum(1 for i in issues if i.get("severity") == "high")
-            answer = f"Found {len(issues)} total architectural issues ({high_severity_count} high severity). Review the 'Code Smells & Refactoring' tab for circular dependencies and high in-degree modules."
-        else:
-            answer = "No immediate bottlenecks or high-coupling code smells detected in the current active graph."
-    elif "structure" in question_lower or "stack" in question_lower:
-        answer = "ONGISA uses a modular Python backend (`forge-core`, `forge-analyzer`, `forge-ai`) paired with a Next.js 14+ App Router frontend featuring React Flow topology visualization."
-    else:
-        file_count = len(files)
-        answer = f"Analyzing your repository containing {file_count} tracked files. Based on the AST structure, modules are correctly decoupled into core parsers and API routers. Could you specify which file or directory you'd like to inspect?"
+    try:
+        answer = agent.query_architecture(
+            query.question,
+            query.codebase_context or {}
+        )
 
-    return {
-        "status": "success",
-        "question": query.question,
-        "answer": answer
-    }
+        return {
+            "status": "success",
+            "question": query.question,
+            "answer": answer
+        }
+
+    except Exception as e:
+        return {
+            "status": "error",
+            "question": query.question,
+            "answer": f"Forge AI error: {str(e)}"
+        }
