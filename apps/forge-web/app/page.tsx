@@ -221,14 +221,53 @@ export default function Home() {
         {/* =========================================================
             UPLOADER TAB
         ========================================================= */}
+{activeTab === 'uploader' && (
+  <div className="py-4 space-y-6">
 
-        {activeTab === 'uploader' && (
-          <div className="py-4">
-            <UploadDropzone
-              onAnalysisComplete={handleAnalysisComplete}
-            />
-          </div>
-        )}
+    {/* Git Repository Analyzer */}
+    <div className="bg-gray-900 border border-gray-800 rounded-xl p-6">
+
+      <h2 className="text-xl font-bold text-cyan-400 mb-2">
+        Analyze Git Repository
+      </h2>
+
+      <p className="text-sm text-gray-400 mb-4">
+        Enter a public GitHub repository URL to clone and analyze its architecture.
+      </p>
+
+      <div className="flex gap-2 items-center mb-4">
+        <input
+          type="text"
+          placeholder="https://github.com/username/repository"
+          className="bg-gray-900 border border-gray-800 rounded-lg px-3 py-2 text-xs text-white font-mono flex-1"
+          id="repoUrlInput"
+        />
+
+        <button
+          onClick={async () => {
+            const inputEl = document.getElementById(
+              'repoUrlInput'
+            ) as HTMLInputElement;
+
+            if (!inputEl?.value) return;
+
+            // Trigger API call to /api/analyze/git
+          }}
+          className="bg-cyan-600 hover:bg-cyan-500 text-white px-4 py-2 rounded-lg text-xs font-semibold transition"
+        >
+          Clone & Analyze Repo
+        </button>
+      </div>
+
+    </div>
+
+    {/* ZIP Analyzer */}
+    <UploadDropzone
+      onAnalysisComplete={handleAnalysisComplete}
+    />
+
+  </div>
+)}
 
         {/* =========================================================
             REFACTOR TAB - AST AUTOMATED REFACTORING
