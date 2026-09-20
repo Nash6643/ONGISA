@@ -1,22 +1,74 @@
-import tempfile
 import os
+import tempfile
+
 from git import Repo
+from git.exc import GitCommandError
+
 
 class WorkspaceManager:
+    """
+    Creates a workspace for Forge to analyze.
+
+    The target can be:
+    - A local repository path
+    - A public Git repository URL
+    """
+
     def __init__(self, target_url_or_path: str):
         self.target = target_url_or_path
         self.temp_dir = None
         self.repo_path = None
 
     def setup_workspace(self) -> str:
-        if os.path.exists(self.target):
-            self.repo_path = self.target
-        else:
-            self.temp_dir = tempfile.TemporaryDirectory()
-            Repo.clone_from(self.target, self.temp_dir.name, depth=1)
+        """
+        Prepare the repository workspace.
+
+        Returns:
+            str: Path to the repository that Forge should analyze.
+        """
+
+        if not self.target or not self.target.strip():
+            raise ValueError("Repository path or URL is required.")
+
+        target = self.target.strip()
+
+        # Local repository
+        if os.path.exists(target):
+            self.repo_path = os.path.abspath(target)
+            return self.repo_path
+
+        # Remote Git repository
+        try:
+            self.temp_dir = tempfile.TemporaryDirectory(
+                prefix="forge_repo_"
+            )
+
+            Repo.clone_from(
+                target,
+                self.temp_dir.name,
+                depth=1
+            )
+
             self.repo_path = self.temp_dir.name
-        return self.repo_path
+
+            return self.repo_path
+
+        except GitCommandError as e:
+            if self.temp_dir:
+                self.temp_dir.cleanup()
+                self.temp_dir = None
+
+            raise RuntimeError(
+                f"Failed to clone repository: {e}"
+            ) from e
 
     def cleanup(self):
+        """
+        Remove the temporary workspace if one was created.
+        """
+
         if self.temp_dir:
             self.temp_dir.cleanup()
+            self.temp_dir = None
+
+        self.repo_path = None
