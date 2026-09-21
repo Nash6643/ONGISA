@@ -6,7 +6,6 @@ from fastapi import FastAPI, UploadFile, File, HTTPException, Body
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from forge_core.cloner import GitCloner
-import shutil
 
 from forge_core.zip_handler import extract_zip_archive
 from forge_core.schemas import FileNode
@@ -14,6 +13,7 @@ from forge_analyzer.parser import build_dependency_graph
 from forge_analyzer.smells import analyze_code_smells
 from forge_analyzer.refactor import perform_ast_dry_run
 from forge_ai.agent import CodebaseAgent
+from fastapi.responses import PlainTextResponsesss
 
 
 app = FastAPI(title="Forge API Engine")
@@ -117,6 +117,37 @@ async def analyze_zip_upload(file: UploadFile = File(...)):
             shutil.rmtree(extracted_dir)
 
 
+class ReportRequest(BaseModel):
+    codebase_context: dict | None = None
+
+@app.post("/api/export/report", response_class=PlainTextResponse)
+async def export_architecture_report(req: ReportRequest):
+    context = req.codebase_context or {}
+    files = context.get("graph", {}).get("nodes", [])
+    issues = context.get("issues", [])
+
+    report = f"""# ONGISA Architecture & Code Audit Report
+Generated automatically by ONGISA AI Engine.
+
+## Overview
+- **Total Tracked Files/Nodes**: {len(files)}
+- **Detected Code Smells / Issues**: {len(issues)}
+
+## Detected Issues & Smells
+"""
+    if issues:
+        for idx, issue in enumerate(issues, 1):
+            report += f"{idx}. **[{issue.get('severity', 'MEDIUM').upper()}]** {issue.get('description', 'General architectural coupling smell.')}\n"
+    else:
+        report += "No major architectural smells or circular dependencies detected.\n"
+
+    report += """
+## Recommendations
+- Ensure modular boundaries are preserved between `forge-core`, `forge-analyzer`, and `forge-ai`.
+- Regularly inspect high in-degree nodes via the React Flow topology dashboard.
+"""
+    return report
+
 @app.post("/api/refactor/ast")
 async def refactor_ast_endpoint(payload: dict = Body(...)):
     source_code = payload.get("source_code", "")
@@ -151,6 +182,10 @@ async def analyze_git_repo(req: RepoCloneRequest):
     finally:
         # Optional cleanup after analysis if needed, or keep for session
         pass
+
+
+
+    
 
 
 class ChatQuery(BaseModel):
