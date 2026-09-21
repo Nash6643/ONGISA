@@ -92,7 +92,25 @@ export default function Home() {
             >
               Zip Analyzer
             </button>
-
+            {/* Export */}
+            <button
+  onClick={async () => {
+    const res = await fetch('/api/export', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ codebase_context: analysisResult }),
+    });
+    const blob = await res.blob();
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'ongisa-architecture-report.md';
+    a.click();
+  }}
+  className="bg-cyan-600 hover:bg-cyan-500 text-white px-3 py-1.5 rounded-lg text-xs font-semibold transition flex items-center gap-1.5"
+>
+  <span>📥</span> Export Audit Report
+</button>            
             {/* Refactor */}
             <button
               onClick={() => setActiveTab('refactor')}
