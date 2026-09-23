@@ -2,82 +2,94 @@
 
 > **AI-powered static codebase analysis, architecture visualization, and intelligent refactoring.**
 
-ONGISA is a developer tool that analyzes entire software projects, maps their structure and dependencies, detects architectural problems, and uses AI to explain issues and suggest safe refactoring strategies.
+ONGISA is a developer tool for understanding large software projects.
 
-Instead of manually tracing hundreds of files and imports, ONGISA gives developers a clear picture of **how their codebase is structured, how its components depend on each other, where architectural problems exist, and how those problems can be improved.**
+It analyzes a codebase, extracts its structure and dependencies, detects architectural problems, visualizes the project as a dependency graph, and uses AI to help developers understand and improve the architecture.
 
----
+Instead of manually tracing hundreds of files and imports, ONGISA provides an architectural view of the codebase and helps answer questions such as:
 
-## ✨ What ONGISA Does
+* What depends on this file?
+* Which modules are highly connected?
+* Are there circular dependencies?
+* Which parts of the codebase are overly complex?
+* Where are architectural smells?
+* What could be refactored?
+* What might be affected by a change?
 
-ONGISA combines **static code analysis**, **dependency mapping**, **architecture visualization**, and **AI-powered code understanding** into one platform.
-
-You can point ONGISA at a project and discover:
-
-* 📁 Project and directory structure
-* 🔗 File and module dependencies
-* 📦 Import relationships
-* 🔍 Functions, classes, and symbols
-* 📊 File and code complexity metrics
-* 🗑️ Potentially unused or disconnected modules
-* 🔄 Circular dependencies
-* 🏢 Overly large or complex "God Modules"
-* ⚠️ Architectural smells and structural problems
-* 🤖 AI explanations of detected issues
-* 🔧 AI-generated refactoring suggestions
-
-The goal is simple:
-
-> **Give developers an X-ray of their entire codebase.**
+> **The goal: give developers an X-ray of their codebase.**
 
 ---
 
-# 🧠 How It Works
+# ✨ What ONGISA Does
 
-ONGISA follows a pipeline that turns a source code repository into an understandable architectural model.
+ONGISA combines several capabilities into one developer platform:
+
+* 🔎 Static code analysis
+* 📁 Repository structure analysis
+* 🔗 Dependency analysis
+* 🕸️ Dependency graph generation
+* 📊 Code and structural metrics
+* 🚨 Architectural smell detection
+* 🏢 God-module detection
+* 🔄 Circular dependency detection
+* 🗑️ Disconnected/orphan module detection
+* 📦 ZIP-based repository ingestion
+* 🌐 Web-based architecture dashboard
+* 🤖 Gemini-powered architecture assistance
+* 💬 Conversational AI Architecture Assistant
+* 📥 Markdown architecture/code audit reports
+* 🔧 AI-assisted refactoring workflows
+* 🐳 Docker development configuration
+* ⚙️ GitHub Actions CI pipeline
+
+---
+
+# 🧠 How ONGISA Works
+
+ONGISA follows a pipeline that converts a software repository into an architectural model.
 
 ```text
-                    PROJECT
-                       │
-                       ▼
-              ┌─────────────────┐
-              │   ONGISA CORE   │
-              └────────┬────────┘
-                       │
-                       ▼
-              ┌─────────────────┐
-              │     ANALYZE     │
-              │                 │
-              │ Files           │
-              │ Functions       │
-              │ Classes         │
-              │ Imports         │
-              │ Dependencies    │
-              │ Metrics         │
-              └────────┬────────┘
-                       │
-              ┌────────┴────────┐
-              ▼                 ▼
-       DEPENDENCY GRAPH    ARCHITECTURE
-                              ANALYSIS
-              │                 │
-              └────────┬────────┘
-                       ▼
-                ┌──────────────┐
-                │  WEB DASHBOARD│
-                └──────┬───────┘
-                       │
-                       ▼
-                 ┌───────────┐
-                 │    AI     │
-                 │   + RAG   │
-                 └─────┬─────┘
-                       │
-                       ▼
-               REFACTOR PLAN
-                       │
-                       ▼
-                PROPOSED CHANGES
+                     PROJECT
+                        │
+                        ▼
+                ┌─────────────────┐
+                │   ONGISA CORE   │
+                └────────┬────────┘
+                         │
+                         ▼
+                ┌─────────────────┐
+                │     ANALYZE     │
+                │                 │
+                │ Files           │
+                │ Functions       │
+                │ Classes         │
+                │ Imports         │
+                │ Dependencies    │
+                │ Metrics         │
+                └────────┬────────┘
+                         │
+              ┌──────────┼──────────┐
+              ▼          ▼          ▼
+        DEPENDENCY   ARCHITECTURE   CALL
+           GRAPH       ANALYSIS     ANALYSIS
+              │          │          │
+              └──────────┼──────────┘
+                         ▼
+                ┌─────────────────┐
+                │  WEB DASHBOARD  │
+                └────────┬────────┘
+                         │
+                         ▼
+                ┌─────────────────┐
+                │   GEMINI AI     │
+                │    + RAG        │
+                └────────┬────────┘
+                         │
+                         ▼
+                 AI EXPLANATIONS
+                         │
+                         ▼
+                  REFACTOR PLANS
 ```
 
 ---
@@ -86,7 +98,7 @@ ONGISA follows a pipeline that turns a source code repository into an understand
 
 ONGISA analyzes source files and extracts structural information from the project.
 
-Depending on the supported language, it can identify:
+The analyzer can work with information such as:
 
 * Files
 * Directories
@@ -95,8 +107,9 @@ Depending on the supported language, it can identify:
 * Methods
 * Imports
 * Exports
+* Symbols
 * Module relationships
-* Symbol relationships
+* Dependency relationships
 * File metrics
 
 For example:
@@ -118,9 +131,9 @@ src/
     └── database.ts
 ```
 
-ONGISA doesn't just see these as files.
+ONGISA does not simply treat these as isolated files.
 
-It builds a structural representation of the project and understands relationships such as:
+It builds relationships between them:
 
 ```text
 login.ts
@@ -141,43 +154,43 @@ payment.ts
 
 # 🕸️ Dependency Graph
 
-One of ONGISA's core capabilities is turning imports and relationships into a dependency graph.
+One of ONGISA's core features is converting imports and module relationships into a visual dependency graph.
 
-For example:
+Example:
 
 ```text
-              app.ts
-             /     \
-            ▼       ▼
-        auth.ts   users.ts
-           │         │
-           └────┬────┘
-                ▼
-          database.ts
+                 app.ts
+                /     \
+               ▼       ▼
+           auth.ts   users.ts
+               │       │
+               └───┬───┘
+                   ▼
+              database.ts
 ```
 
-This allows developers to quickly understand:
+The graph helps developers understand:
 
-* Which files depend on a particular module
+* Which files depend on a module
 * Which modules have many dependents
 * Which modules are isolated
 * Where dependencies are concentrated
 * Where circular dependencies exist
-* How changes to one module may affect others
+* How changes may propagate through the project
 
-The generated graph can also be exported as a standalone payload such as:
+ONGISA can also generate graph data such as:
 
 ```text
 graph.json
 ```
 
+The web dashboard uses this information to create an interactive architecture view.
+
 ---
 
 # 🚨 Architectural Smell Detection
 
-Large projects often develop structural problems that aren't immediately obvious.
-
-ONGISA attempts to automatically identify these problems.
+ONGISA analyzes structural relationships and metrics to identify potential architectural problems.
 
 ## 🏢 God Modules
 
@@ -187,6 +200,7 @@ For example:
 
 ```text
 UserManager.ts
+
 ├── Authentication
 ├── Database operations
 ├── Email notifications
@@ -195,14 +209,15 @@ UserManager.ts
 └── User management
 ```
 
-ONGISA can flag this module based on structural metrics such as:
+ONGISA can use structural information such as:
 
 * File size
-* Number of symbols
-* Number of responsibilities
+* Symbol count
 * Import count
 * Dependency relationships
 * Structural complexity
+
+to identify modules that deserve investigation.
 
 Example:
 
@@ -216,7 +231,6 @@ Metrics:
 2,800 lines
 67 functions
 32 imports
-18 classes
 
 Recommendation:
 Consider separating authentication,
@@ -228,7 +242,7 @@ and user management.
 
 ## 🔄 Circular Dependencies
 
-ONGISA can detect dependency cycles such as:
+ONGISA can identify dependency cycles such as:
 
 ```text
 A → B
@@ -248,15 +262,15 @@ database.ts
 auth.ts
 ```
 
-These relationships can make software harder to maintain, test, and modify.
+Circular dependencies can make a project harder to understand, test, and modify.
 
 ---
 
 ## 🗑️ Disconnected / Orphan Modules
 
-ONGISA can identify modules that appear disconnected from the main application graph.
+ONGISA can identify files that appear disconnected from the main application dependency graph.
 
-For example:
+Example:
 
 ```text
 Application
@@ -269,187 +283,239 @@ Application
 legacyPayments.ts
 ```
 
-If `legacyPayments.ts` has no meaningful connections to the application, ONGISA can flag it for investigation.
+A disconnected module can then be investigated to determine whether it is unused, obsolete, or intentionally isolated.
+
+---
+
+# 📦 Repository Ingestion
+
+ONGISA supports analyzing uploaded project archives through the web dashboard.
+
+The current workflow allows a developer to:
+
+```text
+Project
+   │
+   ▼
+ZIP Upload
+   │
+   ▼
+Archive Extraction
+   │
+   ▼
+Source Analysis
+   │
+   ▼
+Dependency Graph
+   │
+   ▼
+Architecture Dashboard
+```
+
+The web application includes an upload interface for sending project archives to the backend analyzer.
+
+Repository cloning and broader Git-based ingestion are part of the project's ongoing development.
 
 ---
 
 # 🤖 AI Codebase Intelligence
 
-ONGISA uses AI to provide a higher-level understanding of the analyzed project.
+ONGISA includes an AI layer built around Google's Gemini API.
 
-Instead of sending an entire codebase blindly to an LLM, ONGISA first analyzes the repository and retrieves the most relevant information.
+The AI layer is designed to reason about the **structured information produced by the analyzer**, rather than blindly sending an entire repository to an LLM.
 
-This allows AI requests to be grounded in:
+The architecture can provide the AI with information such as:
 
-* Relevant source files
+* Repository structure
+* Files
 * Symbols
 * Imports
-* Dependency relationships
-* Architectural diagnostics
-* Project structure
-* Previously indexed code
+* Dependencies
+* Graph relationships
+* Architectural issues
+* Code smells
+* Analysis results
+
+This allows the AI to provide architecture-focused answers grounded in the analyzed project.
 
 ---
 
-# 🧠 RAG-Powered Codebase Chat
+# 💬 Architecture AI Assistant
 
-ONGISA can index project code into a local vector store and use **Retrieval-Augmented Generation (RAG)** to answer questions about the codebase.
+The web dashboard includes a conversational **Architecture AI Assistant**.
 
-Developers can ask questions such as:
+A floating chat interface allows developers to ask questions about the analyzed codebase.
+
+Example questions:
 
 ```text
-Why does payments.ts depend on database.ts?
+Where is data validation handled?
 
-Where is UserService being used?
+Which files depend on this module?
 
-Which modules depend on authentication?
+Why is this module highly connected?
 
-Why is this module considered a God Module?
+What architectural problems were detected?
 
-What would happen if I changed database.ts?
+Explain the current dependency structure.
 
-Where should this functionality be moved?
+What could be causing this coupling?
 
-Are there circular dependencies in the project?
+How could this module be refactored?
 ```
 
-Instead of searching through thousands of lines manually, ONGISA retrieves the relevant context and provides it to the AI.
+The request flows through the web application to the ONGISA AI backend and then to Gemini.
+
+```text
+Developer Question
+        │
+        ▼
+Architecture Chat Drawer
+        │
+        ▼
+Next.js API Route
+        │
+        ▼
+ONGISA AI Engine
+        │
+        ▼
+Gemini
+        │
+        ▼
+Architecture Response
+```
+
+---
+
+# 📥 Architecture Audit Reports
+
+ONGISA can generate Markdown architecture and code audit reports from analysis results.
+
+Reports can contain information such as:
+
+* Total tracked files
+* Dependency information
+* Detected architectural issues
+* Code smells
+* Issue severity
+* Structural recommendations
+
+Example:
+
+```text
+ONGISA Architecture & Code Audit Report
+
+Overview
+├── Total tracked files
+├── Detected issues
+└── Architectural observations
+
+Detected Issues
+├── God modules
+├── Circular dependencies
+└── Other structural smells
+
+Recommendations
+└── Suggested architectural improvements
+```
+
+Reports can be exported directly from the web dashboard.
 
 ---
 
 # 🔧 AI-Assisted Refactoring
 
-ONGISA can also use the analysis results to create refactoring plans.
+ONGISA is designed to use analyzer results to assist with refactoring.
 
-For example, you might ask:
+Instead of asking an AI model to modify a project without understanding its architecture, ONGISA first gathers structural information.
 
-```text
-Refactor UserManager.ts so that authentication,
-database access, and notifications are separated.
-```
-
-ONGISA can analyze the existing architecture and propose a structure such as:
+Example request:
 
 ```text
-Before:
-
-UserManager.ts
-├── Authentication
-├── Database
-├── Notifications
-└── User Management
-
-
-After:
-
-auth/
-└── AuthService.ts
-
-users/
-├── UserService.ts
-└── UserRepository.ts
-
-notifications/
-└── EmailService.ts
+Refactor UserManager.ts so that
+authentication, database access,
+and notifications are separated.
 ```
 
-The goal is not simply to generate code.
+The intended workflow is:
 
-ONGISA should understand **which existing files are affected and how their dependencies need to change.**
+```text
+Developer Request
+        │
+        ▼
+Analyzer Diagnostics
+        │
+        ▼
+Architecture Context
+        │
+        ▼
+Gemini
+        │
+        ▼
+Refactoring Plan
+        │
+        ▼
+Proposed Changes
+        │
+        ▼
+Developer Review
+```
 
-Refactoring operations are designed around a **dry-run workflow**, allowing developers to inspect proposed changes before applying them.
+The project uses a **dry-run approach** so proposed changes can be inspected before being applied.
 
 ---
 
 # 🖥️ CLI
 
-ONGISA provides a command-line interface for developers who prefer working directly from the terminal.
+ONGISA includes a developer-facing CLI architecture.
 
-## Analyze a Project
+Current commands include:
 
 ```bash
 forge analyze
 ```
 
-Analyzes the project and generates structural information and dependency data.
-
----
-
-## Chat With Your Codebase
+Analyzes a project and generates structural and dependency information.
 
 ```bash
 forge chat
 ```
 
-Starts an AI-powered conversation with the indexed codebase.
-
-Example:
-
-```text
-> Which files depend on database.py?
-
-> Why is UserManager.py considered complex?
-
-> Show me potential architectural problems.
-```
-
----
-
-## Refactor a File
+Starts an AI-assisted conversation with the codebase.
 
 ```bash
 forge refactor
 ```
 
-Runs an AI-assisted refactoring workflow based on analyzer diagnostics and developer instructions.
+Runs the refactoring workflow using analyzer diagnostics and developer instructions.
 
 ---
 
 # 🌐 Web Dashboard
 
-ONGISA also provides a web-based architecture dashboard.
+The ONGISA web dashboard is built with Next.js and React.
 
-The dashboard is designed to make large codebases easier to understand visually.
+The dashboard provides a visual interface for exploring analyzed projects.
 
-### Dashboard capabilities include:
+Current capabilities include:
 
-* Interactive dependency graphs
-* File filtering
-* Language filtering
-* Minimum file-size filtering
-* Symbol-count filtering
-* Custom path filtering
-* Architectural smell visualization
+* Interactive dependency topology
+* Repository/project upload
+* Architecture analysis
+* Code smell visualization
 * Dependency exploration
-* Codebase statistics
-* AI-assisted refactoring
-* Refactoring previews
+* Analysis results
+* AI Architecture Chat Assistant
+* Markdown audit report export
+* Refactoring workflow interface
 
-Example workflow:
-
-```text
-Open Project
-     ↓
-Analyze Codebase
-     ↓
-View Architecture
-     ↓
-Find Problems
-     ↓
-Inspect Dependencies
-     ↓
-Ask AI
-     ↓
-Generate Refactoring Plan
-     ↓
-Review Changes
-```
+The dashboard is designed around the idea that developers should be able to **see the architecture before changing it**.
 
 ---
 
 # 🏗️ Project Architecture
 
-ONGISA uses a modular monorepo architecture.
+ONGISA is organized as a modular monorepo.
 
 ```text
 ONGISA/
@@ -459,18 +525,21 @@ ONGISA/
 │   ├── forge-core/
 │   │   ├── schemas/
 │   │   ├── models/
-│   │   └── repository/
+│   │   ├── repository/
+│   │   └── cloner.py
 │   │
 │   ├── forge-analyzer/
 │   │   ├── parsers/
 │   │   ├── analysis/
 │   │   ├── metrics/
-│   │   └── graph/
+│   │   ├── graph/
+│   │   └── callgraph.py
 │   │
 │   ├── forge-ai/
 │   │   ├── embeddings/
 │   │   ├── retrieval/
 │   │   ├── vector_store/
+│   │   ├── agent.py
 │   │   └── gemini/
 │   │
 │   └── forge-refactor/
@@ -483,9 +552,26 @@ ONGISA/
 │
 ├── apps/
 │   └── forge-web/
+│       ├── app/
+│       │   └── api/
+│       │       ├── chat/
+│       │       ├── export/
+│       │       └── graph/
+│       │
+│       └── components/
+│           ├── DependencyGraph.tsx
+│           ├── UploadDropzone.tsx
+│           ├── AnalysisResult.tsx
+│           └── ArchitectureChatDrawer.tsx
+│
+├── .github/
+│   └── workflows/
+│       └── ci.yml
 │
 ├── tests/
 │
+├── Dockerfile
+├── docker-compose.yml
 └── README.md
 ```
 
@@ -495,15 +581,16 @@ ONGISA/
 
 ## `forge-core`
 
-Provides shared models and infrastructure used across ONGISA.
+The shared foundation of ONGISA.
 
 Responsibilities include:
 
-* Common schemas
-* AST metadata models
+* Shared schemas
 * Repository models
+* AST metadata
 * Analysis result structures
-* Repository cloning utilities
+* Repository utilities
+* Repository cloning functionality
 * Shared interfaces
 
 ---
@@ -523,8 +610,9 @@ Responsibilities include:
 * File metrics
 * Structural diagnostics
 * Dependency graph generation
+* Call-graph analysis
 
-This is the primary source of architectural intelligence in ONGISA.
+This package provides the structural intelligence used by the rest of ONGISA.
 
 ---
 
@@ -534,14 +622,14 @@ The AI intelligence layer.
 
 Responsibilities include:
 
-* Code indexing
+* Gemini integration
+* AI architecture questions
+* Codebase context construction
+* Retrieval architecture
 * Embeddings
 * Vector storage
-* Retrieval
-* Context construction
-* Gemini integration
-* AI codebase chat
-* Architecture explanations
+* AI explanations
+* Architecture chat
 
 ---
 
@@ -555,7 +643,7 @@ Responsibilities include:
 * Analyzer diagnostic integration
 * AI refactoring prompts
 * Transformation planning
-* Dry-run changes
+* Dry-run workflows
 * Proposed file modifications
 
 ---
@@ -564,7 +652,7 @@ Responsibilities include:
 
 The developer-facing terminal interface.
 
-Provides commands such as:
+It provides commands such as:
 
 ```bash
 forge analyze
@@ -572,312 +660,172 @@ forge chat
 forge refactor
 ```
 
-The CLI uses terminal-friendly output to make analysis results easy to read.
-
 ---
 
 ## `forge-web`
 
-The web dashboard.
+The Next.js web application.
 
-Built with Next.js, it provides a visual interface for:
+It provides:
 
-* Exploring the project architecture
-* Viewing dependency graphs
-* Filtering modules
-* Inspecting architectural smells
-* Interacting with the AI
-* Running refactoring workflows
+* Architecture visualization
+* Dependency graph interaction
+* Repository upload
+* Analysis results
+* Architecture chat
+* Audit report export
+* Refactoring workflows
 
 ---
 
-# 🔄 Typical Workflow
+# 🔄 Typical ONGISA Workflow
 
-A typical ONGISA workflow looks like this:
+A typical analysis session looks like this:
 
-### 1. Point ONGISA at a project
+### 1. Upload a project
 
 ```text
-Local Repository
-       │
-       ▼
-     ONGISA
+Developer
+    │
+    ▼
+ZIP Repository
+    │
+    ▼
+ONGISA
 ```
 
-### 2. Analyze the project
+### 2. Analyze the codebase
 
 ```text
 Source Code
-     ↓
+    ↓
 Parser
-     ↓
-AST
-     ↓
+    ↓
+AST / Structure
+    ↓
 Symbols + Imports + Metrics
 ```
 
-### 3. Build the architecture graph
+### 3. Build the dependency graph
 
 ```text
 Files
- ↓
+  ↓
 Imports
- ↓
+  ↓
 Dependencies
- ↓
+  ↓
 Graph
 ```
 
-### 4. Detect problems
+### 4. Detect architectural problems
 
 ```text
 Graph + Metrics
        ↓
-Architectural Analysis
+Architecture Analysis
        ↓
-God Modules
-Circular Dependencies
-Orphan Modules
-Other Structural Issues
+├── God Modules
+├── Circular Dependencies
+├── Disconnected Modules
+└── Other Structural Issues
 ```
 
-### 5. Ask AI
+### 5. Visualize the architecture
+
+```text
+Analysis Results
+       ↓
+React Flow
+       ↓
+Interactive Dashboard
+```
+
+### 6. Ask the AI
 
 ```text
 Developer Question
        ↓
-Relevant Code Retrieval
-       ↓
 Architecture Context
+       ↓
+ONGISA AI Engine
        ↓
 Gemini
        ↓
 AI Explanation
 ```
 
-### 6. Refactor
+### 7. Generate a report
 
 ```text
-Developer Request
+Analysis Results
+       ↓
+Audit Report Generator
+       ↓
+Markdown Report
+       ↓
+Download
+```
+
+### 8. Plan a refactor
+
+```text
+Architecture Problem
        ↓
 Analyzer Diagnostics
        ↓
-AI Refactoring Plan
+Gemini
        ↓
-Proposed Changes
+Refactoring Plan
        ↓
 Developer Review
-       ↓
-Apply Changes
 ```
 
 ---
 
 # 🛠️ Technology Stack
 
-ONGISA is built around a combination of modern developer tooling and AI technologies.
-
-### Backend / Analysis
+## Backend
 
 * Python
-* AST / source-code parsing
+* FastAPI
+* Pydantic
+* Python AST
+* Tree-sitter
 * Static analysis
-* Dependency graph construction
-* Code metrics
 
-### AI
+## AI
 
-* Google Gemini
-* Retrieval-Augmented Generation (RAG)
+* Google Gemini API
+* `google-generativeai`
+* Retrieval-Augmented Generation architecture
 * Embeddings
-* Local vector storage
-* Context-aware code retrieval
+* Vector storage
 
-### CLI
+## Frontend
+
+* Next.js
+* React
+* TypeScript
+* Tailwind CSS
+* React Flow
+
+## CLI
 
 * Python
 * Typer
 * Rich
 
-### Web
+## Infrastructure
 
-* Next.js
-* React
-* TypeScript
-* Modern web visualization technologies
-
-### Architecture
-
-* Monorepo
-* Modular packages
-* Shared schemas
-* CLI + Web interfaces
+* Docker
+* Docker Compose
+* Git
+* GitHub Actions
 
 ---
 
-# 🎯 Problem ONGISA Solves
-
-As software projects grow, understanding the architecture becomes increasingly difficult.
-
-A project may contain:
-
-```text
-10 files
-      ↓
-50 files
-      ↓
-500 files
-      ↓
-5,000+ files
-```
-
-At that point, developers can struggle to answer basic questions:
-
-* What depends on this file?
-* Where is this function used?
-* Why is this module so large?
-* Which files are safe to modify?
-* Are there circular dependencies?
-* Is this code still being used?
-* Where should this functionality live?
-* What will break if I change this module?
-* How should this part of the system be refactored?
-
-ONGISA aims to answer these questions automatically.
-
----
-
-# 💡 Why ONGISA?
-
-Traditional code analysis tools are good at identifying individual problems.
-
-AI coding assistants are good at generating and explaining code.
-
-ONGISA combines both approaches.
-
-```text
-STATIC ANALYSIS
-       +
-DEPENDENCY GRAPH
-       +
-ARCHITECTURE ANALYSIS
-       +
-RAG
-       +
-GENERATIVE AI
-       =
-CODEBASE INTELLIGENCE
-```
-
-The analyzer provides **facts about the codebase**.
-
-The AI provides **interpretation and recommendations**.
-
-Together, they provide developers with a higher-level understanding of their software architecture.
-
----
-
-# 🚧 Project Status
-
-ONGISA is currently under active development.
-
-### Current development focus
-
-* [x] Project structure
-* [x] Core schemas
-* [x] Repository analysis foundation
-* [x] Dependency analysis
-* [x] Symbol extraction
-* [x] CLI foundation
-* [x] AI integration foundation
-* [x] RAG architecture
-* [x] Web dashboard foundation
-* [ ] Expand language support
-* [ ] Improve architectural smell detection
-* [ ] Improve dependency graph visualization
-* [ ] Expand AI codebase reasoning
-* [ ] Advanced refactoring transformations
-* [ ] Safer automated code modifications
-* [ ] Test coverage expansion
-* [ ] Production-ready repository ingestion
-
----
-
-# 🔮 Future Roadmap
-
-ONGISA is intended to evolve into a complete codebase intelligence platform.
-
-### Phase 1 — Static Analysis
-
-* Multi-language parsing
-* Improved AST analysis
-* Better symbol extraction
-* Advanced dependency tracking
-* More code metrics
-
-### Phase 2 — Architecture Intelligence
-
-* More architectural smell detectors
-* Dependency risk scoring
-* Module coupling analysis
-* Change-impact analysis
-* Architecture health scoring
-
-### Phase 3 — AI Intelligence
-
-* Improved RAG retrieval
-* Architecture-aware AI prompts
-* Codebase reasoning
-* Natural-language architecture exploration
-* Better refactoring recommendations
-
-### Phase 4 — Automated Refactoring
-
-* Multi-file refactoring
-* Dependency-aware transformations
-* Refactoring previews
-* Patch generation
-* Safe rollback
-* Automated tests after refactoring
-
-### Phase 5 — Developer Platform
-
-* GitHub repository integration
-* Repository history analysis
-* Pull request architecture analysis
-* CI/CD integration
-* Team dashboards
-* Architecture health monitoring
-
----
-
-# 🔐 Design Philosophy
-
-ONGISA is built around a few important principles.
-
-### 1. Understand Before Changing
-
-AI should understand the architecture before suggesting modifications.
-
-### 2. Analysis Before Generation
-
-The system should gather structural information before asking an LLM to reason about the project.
-
-### 3. Explainable Recommendations
-
-Developers should understand **why** a change is being recommended.
-
-### 4. Safe Refactoring
-
-Refactoring should favor previews, dry runs, and developer approval rather than blindly modifying production code.
-
-### 5. Developer Control
-
-ONGISA is intended to assist developers, not replace their judgment.
-
----
-
-# 🚀 Getting Started
+# ⚙️ Development Setup
 
 Clone the repository:
 
@@ -886,77 +834,254 @@ git clone <repository-url>
 cd ONGISA
 ```
 
-Install dependencies according to the package configuration.
+Create/activate the Python environment:
 
-Then run the CLI:
-
-```bash
-forge analyze
+```powershell
+.\.venv\Scripts\Activate.ps1
 ```
 
-Start an AI codebase session:
+Set the Gemini API key:
 
-```bash
-forge chat
+```powershell
+$env:GEMINI_API_KEY="your_gemini_api_key"
 ```
 
-Run the refactoring workflow:
+Set the Python package paths:
 
-```bash
-forge refactor
+```powershell
+$env:PYTHONPATH="packages/forge-core/src;packages/forge-analyzer/src;packages/forge-ai/src"
 ```
 
-> Setup instructions will be expanded as the project reaches a stable release.
+Start the backend:
+
+```powershell
+uvicorn forge_ai.main:app --reload --port 8000
+```
+
+In another terminal, start the web dashboard:
+
+```powershell
+npm run dev --prefix apps/forge-web
+```
+
+The project can also be developed using Docker when Docker Desktop is available.
 
 ---
 
-# 📁 Supported Repository Sources
+# 🧪 Testing
 
-ONGISA is designed to work with software repositories rather than being limited to a single hosting provider.
+ONGISA includes automated Python tests and a Next.js build check through GitHub Actions.
 
-Potential repository sources include:
+The Python test suite can be run with:
+
+```powershell
+$env:PYTHONPATH="packages/forge-core/src;packages/forge-analyzer/src;packages/forge-ai/src"
+
+python -m pytest packages/forge-core/tests packages/forge-analyzer/tests packages/forge-ai/tests
+```
+
+The web application can be checked with:
+
+```powershell
+npm run build --prefix apps/forge-web
+```
+
+GitHub Actions is configured to automatically run project checks on pushes and pull requests.
+
+> The CI configuration is still being refined as the project evolves.
+
+---
+
+# 🚧 Current Project Status
+
+ONGISA is actively under development.
+
+### Completed / Implemented
+
+* [x] Monorepo project structure
+* [x] Core package architecture
+* [x] Repository analysis foundation
+* [x] Static code analysis
+* [x] Import/dependency analysis
+* [x] Symbol extraction
+* [x] Dependency graph generation
+* [x] Architecture visualization
+* [x] React Flow topology dashboard
+* [x] ZIP repository upload
+* [x] Upload/dropzone interface
+* [x] Architectural smell analysis
+* [x] God-module detection
+* [x] Circular dependency analysis
+* [x] Disconnected module analysis
+* [x] FastAPI backend
+* [x] Next.js web dashboard
+* [x] Gemini AI integration
+* [x] Architecture AI chat endpoint
+* [x] Architecture Chat Drawer
+* [x] Markdown architecture report export
+* [x] Docker configuration
+* [x] GitHub Actions CI foundation
+* [x] Refactoring workflow foundation
+
+### In Progress
+
+* [ ] More robust multi-language analysis
+* [ ] More advanced call-graph analysis
+* [ ] Deeper cross-language dependency analysis
+* [ ] More sophisticated architectural smell detection
+* [ ] Improved AI/RAG reasoning
+* [ ] More advanced refactoring transformations
+* [ ] Improved repository ingestion
+* [ ] Expanded automated test coverage
+* [ ] Production-ready GitHub repository ingestion
+
+---
+
+# 🔮 Roadmap
+
+## Phase 1 — Static Analysis
+
+* Multi-language parsing
+* Improved AST analysis
+* Better symbol resolution
+* Advanced dependency tracking
+* More code metrics
+
+## Phase 2 — Architecture Intelligence
+
+* More architectural smell detectors
+* Module coupling analysis
+* Change-impact analysis
+* Dependency risk analysis
+* Architecture health metrics
+
+## Phase 3 — AI Intelligence
+
+* Better RAG retrieval
+* Architecture-aware prompting
+* Deeper codebase reasoning
+* Natural-language architecture exploration
+* More precise refactoring recommendations
+
+## Phase 4 — Automated Refactoring
+
+* Multi-file transformations
+* Dependency-aware refactoring
+* Refactoring previews
+* Patch generation
+* Safe rollback
+* Automated tests after changes
+
+## Phase 5 — Developer Platform
+
+* GitHub repository integration
+* Repository history analysis
+* Pull-request architecture analysis
+* CI/CD integration
+* Team dashboards
+* Continuous architecture monitoring
+
+---
+
+# 🔐 Design Philosophy
+
+ONGISA is built around several principles.
+
+### 1. Understand Before Changing
+
+The system should understand the architecture before suggesting modifications.
+
+### 2. Analysis Before Generation
+
+Structural analysis should provide context before AI generation takes place.
+
+### 3. Explainable Recommendations
+
+Developers should understand why an architectural change is being suggested.
+
+### 4. Safe Refactoring
+
+Refactoring should favor previews, dry runs, and developer approval.
+
+### 5. Developer Control
+
+ONGISA is designed to assist developers rather than blindly modify their projects.
+
+---
+
+# 🎯 The Problem ONGISA Solves
+
+As software projects grow, understanding the architecture becomes increasingly difficult.
+
+A project can grow from:
 
 ```text
-Local Project
-     │
-     ├── Git Repository
-     │
-     ├── GitHub Repository
-     │
-     └── Uploaded Project
-            │
-            ▼
-          ONGISA
+10 files
+   ↓
+50 files
+   ↓
+500 files
+   ↓
+5,000+ files
 ```
 
-GitHub integration is planned as part of the platform roadmap.
+At that point, developers may struggle to answer:
+
+```text
+What depends on this file?
+
+Where is this function being used?
+
+Why is this module so large?
+
+Are there circular dependencies?
+
+Which modules are highly connected?
+
+What could break if I change this?
+
+Where should this functionality live?
+
+How should this part of the system be refactored?
+```
+
+ONGISA aims to answer these questions using actual structural information from the codebase.
 
 ---
 
-# 🤝 Contributing
+# 💡 Why ONGISA?
 
-Contributions are welcome.
+Traditional static-analysis tools are useful for finding individual structural problems.
 
-If you want to contribute:
+AI coding assistants are useful for explaining and generating code.
 
-1. Fork the repository.
-2. Create a feature branch.
-3. Make your changes.
-4. Add or update tests where appropriate.
-5. Run the project checks.
-6. Open a pull request.
+ONGISA combines the two:
 
-Example:
-
-```bash
-git checkout -b feature/my-feature
+```text
+STATIC ANALYSIS
+       +
+DEPENDENCY GRAPH
+       +
+ARCHITECTURE ANALYSIS
+       +
+CODEBASE CONTEXT
+       +
+GENERATIVE AI
+       =
+CODEBASE INTELLIGENCE
 ```
+
+The analyzer provides the structural facts.
+
+The AI provides interpretation and explanations.
+
+Together, they create a system designed specifically around understanding software architecture.
 
 ---
 
 # 📄 License
 
-This project is currently under development.
+ONGISA is currently under active development.
 
 License information will be added before the first public release.
 
@@ -964,13 +1089,9 @@ License information will be added before the first public release.
 
 # 👨‍💻 Vision
 
-ONGISA aims to make large software systems easier to understand.
+The long-term vision for ONGISA is to make large software systems easier to understand.
 
-The long-term vision is simple:
-
-> **Give every developer an architectural map of their codebase and an intelligent assistant that understands how the pieces fit together.**
-
-Instead of spending hours manually tracing files, imports, dependencies, and architectural problems, developers should be able to ask:
+Instead of developers spending hours manually tracing files, imports, dependencies, and architectural problems, they should be able to ask:
 
 ```text
 "What is wrong with my architecture?"
@@ -979,19 +1100,18 @@ Instead of spending hours manually tracing files, imports, dependencies, and arc
 
 "What depends on this file?"
 
-"What can I safely change?"
+"What could be affected by this change?"
 
 "How should I refactor this?"
 
-"What will be affected if I change this?"
-
+"Why does this dependency exist?"
 ```
 
-And ONGISA should be able to answer using **actual structural knowledge of the codebase**, not just guesses from raw source code.
+ONGISA should answer those questions using the **actual architecture and structural information of the codebase**, rather than guessing from isolated pieces of source code.
 
 ---
 
-## ⭐ ONGISA
+# ⭐ ONGISA
 
 **Analyze. Understand. Visualize. Refactor.**
 
