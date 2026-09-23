@@ -320,16 +320,16 @@ Repository cloning and broader Git-based ingestion are part of the project's ong
 
 ---
 
-# 🤖 AI Codebase Intelligence
+## 🤖 AI Codebase Intelligence
 
-ONGISA includes an AI layer built around Google's Gemini API.
+ONGISA includes an AI layer powered by Google's Gemini API.
 
-The AI layer is designed to reason about the **structured information produced by the analyzer**, rather than blindly sending an entire repository to an LLM.
+Rather than blindly sending an entire repository to an LLM, the AI layer works with the **structured information produced by ONGISA's analysis pipeline**.
 
-The architecture can provide the AI with information such as:
+The AI can reason over information such as:
 
 * Repository structure
-* Files
+* Files and modules
 * Symbols
 * Imports
 * Dependencies
@@ -338,9 +338,7 @@ The architecture can provide the AI with information such as:
 * Code smells
 * Analysis results
 
-This allows the AI to provide architecture-focused answers grounded in the analyzed project.
-
----
+This allows ONGISA to provide **architecture-focused answers grounded in the actual structure and analysis of the project**, helping developers understand how different parts of the codebase are connected and where potential problems exist.
 
 # 💬 Architecture AI Assistant
 
