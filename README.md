@@ -1080,9 +1080,9 @@ Together, they create a system designed specifically around understanding softwa
 
 # 📄 License
 
-ONGISA is currently under active development.
+ONGISA is currently still under active development.
 
-License information will be added before the first public release.
+License information will be added before the first official public release.
 
 ---
 
