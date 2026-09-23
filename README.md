@@ -983,31 +983,30 @@ ONGISA is actively under development.
 
 ---
 
-# 🔐 Design Philosophy
+## 🔐 Design Philosophy
 
-ONGISA is built around several principles.
+ONGISA is built around a few core principles that guide how the system analyzes codebases and assists developers.
 
 ### 1. Understand Before Changing
 
-The system should understand the architecture before suggesting modifications.
+ONGISA should first understand the structure, dependencies, and architecture of a codebase before suggesting changes.
 
-### 2. Analysis Before Generation
+### 2. Analyze Before Generating
 
-Structural analysis should provide context before AI generation takes place.
+AI should work from the context produced by static analysis. Structural information should be established before AI recommendations or generation take place.
 
-### 3. Explainable Recommendations
+### 3. Explain Recommendations
 
-Developers should understand why an architectural change is being suggested.
+Developers should be able to understand **why** a particular architectural issue or refactoring is being suggested, rather than receiving unexplained changes.
 
-### 4. Safe Refactoring
+### 4. Refactor Safely
 
-Refactoring should favor previews, dry runs, and developer approval.
+Refactoring should be treated as a controlled process. ONGISA favors analysis, previews, dry runs, and developer approval before changes are applied.
 
-### 5. Developer Control
+### 5. Keep the Developer in Control
 
-ONGISA is designed to assist developers rather than blindly modify their projects.
+ONGISA is designed to **assist developers, not replace their decisions**. Developers remain in control of what changes are accepted, rejected, or applied to their codebase.
 
----
 
 # 🎯 The Problem ONGISA Solves
 
