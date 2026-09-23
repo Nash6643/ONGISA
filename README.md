@@ -1,22 +1,24 @@
 # ONGISA
 
-> **AI-powered static codebase analysis, architecture visualization, and intelligent refactoring.**
+> **AI-powered codebase intelligence for understanding, analyzing, and improving software architecture.**
 
-ONGISA is a developer tool for understanding large software projects.
+ONGISA is a developer tool designed to give developers a clear view of how a software project is built.
 
-It analyzes a codebase, extracts its structure and dependencies, detects architectural problems, visualizes the project as a dependency graph, and uses AI to help developers understand and improve the architecture.
+It analyzes a codebase, maps its files, modules, imports, and dependencies, detects architectural problems, visualizes the structure as a dependency graph, and uses AI to help developers understand and improve the system.
 
-Instead of manually tracing hundreds of files and imports, ONGISA provides an architectural view of the codebase and helps answer questions such as:
+Large codebases can become difficult to understand as the number of files, modules, and dependencies grows. Instead of manually searching through files and tracing connections, ONGISA builds an architectural picture of the project and helps developers answer questions such as:
 
-* What depends on this file?
+* What does this file depend on?
+* What depends on this module?
 * Which modules are highly connected?
 * Are there circular dependencies?
-* Which parts of the codebase are overly complex?
-* Where are architectural smells?
+* Which parts of the codebase are becoming too large or complex?
+* Where are the architectural smells?
 * What could be refactored?
-* What might be affected by a change?
+* What parts of the system could be affected by a change?
 
-> **The goal: give developers an X-ray of their codebase.**
+> **The goal: give developers an X-ray of their codebase — from structure and dependencies to architectural problems and possible improvements.**
+
 
 ---
 
