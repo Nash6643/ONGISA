@@ -17,10 +17,72 @@ export default function Home() {
   const [isRefactoring, setIsRefactoring] = useState(false);
   const [refactorLog, setRefactorLog] = useState<string | null>(null);
 
+  // =========================================================
+  // CALL GRAPH STATE
+  // =========================================================
+
+  const [viewMode, setViewMode] = useState<
+    'dependencies' | 'calls'
+  >('dependencies');
+
+  const [callGraphData, setCallGraphData] = useState<any[]>([]);
+  const [isLoadingCallGraph, setIsLoadingCallGraph] = useState(false);
+
+  // =========================================================
+  // ANALYSIS COMPLETE
+  // =========================================================
+
   const handleAnalysisComplete = (result: AnalysisResult) => {
     setAnalysisResult(result);
     setActiveTab('topology');
+    setViewMode('dependencies');
+    setCallGraphData([]);
   };
+
+  // =========================================================
+  // FETCH CALL GRAPH
+  // =========================================================
+
+  const fetchCallGraph = async () => {
+    if (!analysisResult) {
+      return;
+    }
+
+    setIsLoadingCallGraph(true);
+
+    try {
+      const res = await fetch('/api/callgraph', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          codebase_context: analysisResult,
+        }),
+      });
+
+      if (!res.ok) {
+        throw new Error('Failed to fetch call graph.');
+      }
+
+      const data = await res.json();
+
+      if (data.calls) {
+        setCallGraphData(data.calls);
+      } else {
+        setCallGraphData([]);
+      }
+    } catch (error) {
+      console.error('Call graph error:', error);
+      setCallGraphData([]);
+    } finally {
+      setIsLoadingCallGraph(false);
+    }
+  };
+
+  // =========================================================
+  // REFACTOR
+  // =========================================================
 
   const runRefactorDryRun = async () => {
     setIsRefactoring(true);
@@ -54,7 +116,10 @@ export default function Home() {
     <main className="min-h-screen p-8 bg-gray-950 text-gray-100">
       <div className="max-w-7xl mx-auto space-y-6">
 
-        {/* Header */}
+        {/* =========================================================
+            HEADER
+        ========================================================= */}
+
         <header className="border-b border-gray-800 pb-4 flex justify-between items-end">
           <div>
             <h1 className="text-3xl font-bold tracking-tight text-white">
@@ -92,25 +157,36 @@ export default function Home() {
             >
               Zip Analyzer
             </button>
+
             {/* Export */}
             <button
-  onClick={async () => {
-    const res = await fetch('/api/export', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ codebase_context: analysisResult }),
-    });
-    const blob = await res.blob();
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'ongisa-architecture-report.md';
-    a.click();
-  }}
-  className="bg-cyan-600 hover:bg-cyan-500 text-white px-3 py-1.5 rounded-lg text-xs font-semibold transition flex items-center gap-1.5"
->
-  <span>📥</span> Export Audit Report
-</button>            
+              onClick={async () => {
+                const res = await fetch('/api/export', {
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/json',
+                  },
+                  body: JSON.stringify({
+                    codebase_context: analysisResult,
+                  }),
+                });
+
+                const blob = await res.blob();
+                const url = window.URL.createObjectURL(blob);
+
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'ongisa-architecture-report.md';
+                a.click();
+
+                window.URL.revokeObjectURL(url);
+              }}
+              className="bg-cyan-600 hover:bg-cyan-500 text-white px-3 py-1.5 rounded-lg text-xs font-semibold transition flex items-center gap-1.5"
+            >
+              <span>📥</span>
+              Export Audit Report
+            </button>
+
             {/* Refactor */}
             <button
               onClick={() => setActiveTab('refactor')}
@@ -130,10 +206,192 @@ export default function Home() {
         ========================================================= */}
 
         {activeTab === 'topology' && (
-          <DependencyGraph
-            initialNodes={analysisResult?.graph.nodes}
-            initialEdges={analysisResult?.graph.edges}
-          />
+          <div className="space-y-4">
+
+            {/* =====================================================
+                GRAPH VIEW TOGGLE
+            ===================================================== */}
+
+            <div className="flex items-center justify-between">
+
+              <div>
+                <h2 className="text-lg font-semibold text-white">
+                  {viewMode === 'dependencies'
+                    ? 'File Dependency Graph'
+                    : 'Function Call Graph'}
+                </h2>
+
+                <p className="text-xs text-gray-500 mt-1">
+                  {viewMode === 'dependencies'
+                    ? 'Visualize how files and modules depend on each other.'
+                    : 'Visualize function-to-function call relationships.'}
+                </p>
+              </div>
+
+              <div className="flex gap-2 bg-gray-950 p-1 rounded-lg border border-gray-800">
+
+                {/* File Dependencies */}
+                <button
+                  onClick={() => setViewMode('dependencies')}
+                  className={`px-3 py-1 rounded text-xs font-medium transition ${
+                    viewMode === 'dependencies'
+                      ? 'bg-cyan-600 text-white'
+                      : 'text-gray-400 hover:text-white'
+                  }`}
+                >
+                  📁 File Dependencies
+                </button>
+
+                {/* Function Call Graph */}
+                <button
+                  onClick={() => {
+                    setViewMode('calls');
+                    fetchCallGraph();
+                  }}
+                  disabled={!analysisResult || isLoadingCallGraph}
+                  className={`px-3 py-1 rounded text-xs font-medium transition ${
+                    viewMode === 'calls'
+                      ? 'bg-cyan-600 text-white'
+                      : 'text-gray-400 hover:text-white'
+                  } ${
+                    !analysisResult || isLoadingCallGraph
+                      ? 'opacity-50 cursor-not-allowed'
+                      : ''
+                  }`}
+                >
+                  ⚡{' '}
+                  {isLoadingCallGraph
+                    ? 'Loading...'
+                    : 'Function Call-Graph'}
+                </button>
+              </div>
+            </div>
+
+            {/* =====================================================
+                DEPENDENCY GRAPH
+            ===================================================== */}
+
+            {viewMode === 'dependencies' && (
+              <DependencyGraph
+                initialNodes={analysisResult?.graph.nodes}
+                initialEdges={analysisResult?.graph.edges}
+              />
+            )}
+
+            {/* =====================================================
+                CALL GRAPH
+            ===================================================== */}
+
+            {viewMode === 'calls' && (
+              <div className="space-y-3">
+
+                {!analysisResult && (
+                  <div className="bg-gray-900 border border-gray-800 rounded-xl p-8 text-center">
+                    <p className="text-gray-400 text-sm">
+                      Upload and analyze a repository first to generate
+                      the function call graph.
+                    </p>
+                  </div>
+                )}
+
+                {isLoadingCallGraph && (
+                  <div className="bg-gray-900 border border-gray-800 rounded-xl p-8 text-center">
+                    <div className="text-cyan-400 text-sm font-medium">
+                      ⚡ Analyzing function call references...
+                    </div>
+
+                    <p className="text-gray-500 text-xs mt-2">
+                      ONGISA is building the function-level call graph.
+                    </p>
+                  </div>
+                )}
+
+                {!isLoadingCallGraph &&
+                  analysisResult &&
+                  callGraphData.length === 0 && (
+                    <div className="bg-gray-900 border border-gray-800 rounded-xl p-8 text-center">
+                      <p className="text-gray-400 text-sm">
+                        No function call references were returned.
+                      </p>
+
+                      <button
+                        onClick={fetchCallGraph}
+                        className="mt-4 px-4 py-2 bg-cyan-600 hover:bg-cyan-500 rounded-lg text-xs font-semibold transition"
+                      >
+                        Retry Call Graph
+                      </button>
+                    </div>
+                  )}
+
+                {!isLoadingCallGraph &&
+                  callGraphData.length > 0 && (
+                    <div className="space-y-4">
+
+                      {/* Call Graph Summary */}
+                      <div className="bg-gray-900 border border-gray-800 rounded-xl p-4">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <h3 className="text-sm font-semibold text-cyan-400">
+                              Function Call References
+                            </h3>
+
+                            <p className="text-xs text-gray-500 mt-1">
+                              {callGraphData.length} call references detected.
+                            </p>
+                          </div>
+
+                          <span className="text-xs font-mono bg-gray-950 border border-gray-800 px-2 py-1 rounded">
+                            {callGraphData.length} calls
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Call Graph Data */}
+                      <div className="bg-gray-900 border border-gray-800 rounded-xl p-4">
+                        <div className="space-y-2">
+
+                          {callGraphData.map((call, index) => (
+                            <div
+                              key={index}
+                              className="bg-gray-950 border border-gray-800 rounded-lg p-3"
+                            >
+                              <div className="flex items-center gap-3">
+
+                                <span className="text-cyan-400 font-mono text-xs">
+                                  {call.caller ||
+                                    call.from ||
+                                    call.source ||
+                                    'Unknown'}
+                                </span>
+
+                                <span className="text-gray-600">
+                                  →
+                                </span>
+
+                                <span className="text-emerald-400 font-mono text-xs">
+                                  {call.callee ||
+                                    call.to ||
+                                    call.target ||
+                                    'Unknown'}
+                                </span>
+
+                              </div>
+
+                              {call.file && (
+                                <p className="text-[10px] text-gray-600 mt-2 font-mono">
+                                  {call.file}
+                                </p>
+                              )}
+                            </div>
+                          ))}
+
+                        </div>
+                      </div>
+                    </div>
+                  )}
+              </div>
+            )}
+          </div>
         )}
 
         {/* =========================================================
@@ -144,6 +402,7 @@ export default function Home() {
           <div className="bg-gray-900 border border-gray-800 rounded-xl p-6 space-y-6">
 
             <div className="flex justify-between items-center border-b border-gray-800 pb-4">
+
               <div>
                 <h2 className="text-xl font-bold text-cyan-400">
                   Architectural Issues & AST Refactoring
@@ -239,53 +498,57 @@ export default function Home() {
         {/* =========================================================
             UPLOADER TAB
         ========================================================= */}
-{activeTab === 'uploader' && (
-  <div className="py-4 space-y-6">
 
-    {/* Git Repository Analyzer */}
-    <div className="bg-gray-900 border border-gray-800 rounded-xl p-6">
+        {activeTab === 'uploader' && (
+          <div className="py-4 space-y-6">
 
-      <h2 className="text-xl font-bold text-cyan-400 mb-2">
-        Analyze Git Repository
-      </h2>
+            {/* Git Repository Analyzer */}
+            <div className="bg-gray-900 border border-gray-800 rounded-xl p-6">
 
-      <p className="text-sm text-gray-400 mb-4">
-        Enter a public GitHub repository URL to clone and analyze its architecture.
-      </p>
+              <h2 className="text-xl font-bold text-cyan-400 mb-2">
+                Analyze Git Repository
+              </h2>
 
-      <div className="flex gap-2 items-center mb-4">
-        <input
-          type="text"
-          placeholder="https://github.com/username/repository"
-          className="bg-gray-900 border border-gray-800 rounded-lg px-3 py-2 text-xs text-white font-mono flex-1"
-          id="repoUrlInput"
-        />
+              <p className="text-sm text-gray-400 mb-4">
+                Enter a public GitHub repository URL to clone and analyze
+                its architecture.
+              </p>
 
-        <button
-          onClick={async () => {
-            const inputEl = document.getElementById(
-              'repoUrlInput'
-            ) as HTMLInputElement;
+              <div className="flex gap-2 items-center mb-4">
 
-            if (!inputEl?.value) return;
+                <input
+                  type="text"
+                  placeholder="https://github.com/username/repository"
+                  className="bg-gray-900 border border-gray-800 rounded-lg px-3 py-2 text-xs text-white font-mono flex-1"
+                  id="repoUrlInput"
+                />
 
-            // Trigger API call to /api/analyze/git
-          }}
-          className="bg-cyan-600 hover:bg-cyan-500 text-white px-4 py-2 rounded-lg text-xs font-semibold transition"
-        >
-          Clone & Analyze Repo
-        </button>
-      </div>
+                <button
+                  onClick={async () => {
+                    const inputEl = document.getElementById(
+                      'repoUrlInput'
+                    ) as HTMLInputElement;
 
-    </div>
+                    if (!inputEl?.value) return;
 
-    {/* ZIP Analyzer */}
-    <UploadDropzone
-      onAnalysisComplete={handleAnalysisComplete}
-    />
+                    // Trigger API call to /api/analyze/git
+                  }}
+                  className="bg-cyan-600 hover:bg-cyan-500 text-white px-4 py-2 rounded-lg text-xs font-semibold transition"
+                >
+                  Clone & Analyze Repo
+                </button>
 
-  </div>
-)}
+              </div>
+
+            </div>
+
+            {/* ZIP Analyzer */}
+            <UploadDropzone
+              onAnalysisComplete={handleAnalysisComplete}
+            />
+
+          </div>
+        )}
 
         {/* =========================================================
             REFACTOR TAB - AST AUTOMATED REFACTORING
