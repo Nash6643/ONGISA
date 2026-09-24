@@ -22,7 +22,7 @@ Large codebases can become difficult to understand as the number of files, modul
 
 ---
 
-# ✨ What ONGISA Does
+# ✨ What Does ONGISA Do
 
 ONGISA combines several capabilities into one developer platform:
 
