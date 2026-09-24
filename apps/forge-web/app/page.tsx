@@ -112,6 +112,49 @@ export default function Home() {
     }
   };
 
+  // =========================================================
+  // GITHUB REPOSITORY ANALYSIS
+  // =========================================================
+
+  const analyzeGitRepository = async () => {
+    const inputEl = document.getElementById(
+      'githubRepoInput'
+    ) as HTMLInputElement;
+
+    if (!inputEl?.value.trim()) {
+      alert('Please enter a GitHub repository URL.');
+      return;
+    }
+
+    try {
+      const res = await fetch('/api/analyze/git', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          repo_url: inputEl.value.trim(),
+        }),
+      });
+
+      const data = await res.json();
+
+      console.log('Git Analysis Result:', data);
+
+      if (!res.ok) {
+        alert(data.message || data.error || 'Repository analysis failed.');
+        return;
+      }
+
+      alert(
+        data.message || 'Repository analyzed successfully!'
+      );
+    } catch (error) {
+      console.error('Git analysis error:', error);
+      alert('Failed to connect to the Git analysis API.');
+    }
+  };
+
   return (
     <main className="min-h-screen p-8 bg-gray-950 text-gray-100">
       <div className="max-w-7xl mx-auto space-y-6">
@@ -120,85 +163,119 @@ export default function Home() {
             HEADER
         ========================================================= */}
 
-        <header className="border-b border-gray-800 pb-4 flex justify-between items-end">
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight text-white">
-              ONGISA Architecture Dashboard
-            </h1>
+        <header className="border-b border-gray-800 pb-6">
 
-            <p className="text-sm text-gray-400 mt-1">
-              Omar Nashiru-deen GitHub Statistical Analyzer — Static analysis
-              & symbol tree mapping.
-            </p>
+          <div className="flex justify-between items-end gap-6">
+
+            <div>
+              <h1 className="text-3xl font-bold tracking-tight text-white">
+                ONGISA Architecture Dashboard
+              </h1>
+
+              <p className="text-sm text-gray-400 mt-1">
+                Omar Nashiru-deen GitHub Statistical Analyzer — Static analysis
+                & symbol tree mapping.
+              </p>
+            </div>
+
+            <div className="flex gap-2">
+
+              {/* Topology */}
+              <button
+                onClick={() => setActiveTab('topology')}
+                className={`px-4 py-2 rounded-lg font-medium text-sm transition ${
+                  activeTab === 'topology'
+                    ? 'bg-cyan-600 text-white'
+                    : 'bg-gray-900 text-gray-400 border border-gray-800 hover:text-white'
+                }`}
+              >
+                Topology Graph
+              </button>
+
+              {/* Uploader */}
+              <button
+                onClick={() => setActiveTab('uploader')}
+                className={`px-4 py-2 rounded-lg font-medium text-sm transition ${
+                  activeTab === 'uploader'
+                    ? 'bg-cyan-600 text-white'
+                    : 'bg-gray-900 text-gray-400 border border-gray-800 hover:text-white'
+                }`}
+              >
+                Zip Analyzer
+              </button>
+
+              {/* Export */}
+              <button
+                onClick={async () => {
+                  const res = await fetch('/api/export', {
+                    method: 'POST',
+                    headers: {
+                      'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                      codebase_context: analysisResult,
+                    }),
+                  });
+
+                  const blob = await res.blob();
+                  const url = window.URL.createObjectURL(blob);
+
+                  const a = document.createElement('a');
+                  a.href = url;
+                  a.download = 'ongisa-architecture-report.md';
+                  a.click();
+
+                  window.URL.revokeObjectURL(url);
+                }}
+                className="bg-cyan-600 hover:bg-cyan-500 text-white px-3 py-1.5 rounded-lg text-xs font-semibold transition flex items-center gap-1.5"
+              >
+                <span>📥</span>
+                Export Audit Report
+              </button>
+
+              {/* Refactor */}
+              <button
+                onClick={() => setActiveTab('refactor')}
+                className={`px-4 py-2 rounded-lg font-medium text-sm transition ${
+                  activeTab === 'refactor'
+                    ? 'bg-cyan-600 text-white'
+                    : 'bg-gray-900 text-gray-400 border border-gray-800 hover:text-white'
+                }`}
+              >
+                Code Smells & Refactoring
+              </button>
+
+            </div>
           </div>
 
-          <div className="flex gap-2">
+          {/* =========================================================
+              GITHUB REPOSITORY INPUT
+          ========================================================= */}
 
-            {/* Topology */}
-            <button
-              onClick={() => setActiveTab('topology')}
-              className={`px-4 py-2 rounded-lg font-medium text-sm transition ${
-                activeTab === 'topology'
-                  ? 'bg-cyan-600 text-white'
-                  : 'bg-gray-900 text-gray-400 border border-gray-800 hover:text-white'
-              }`}
-            >
-              Topology Graph
-            </button>
+          <div className="flex gap-2 items-center bg-gray-900 p-2 rounded-xl border border-gray-800 mt-6">
 
-            {/* Uploader */}
-            <button
-              onClick={() => setActiveTab('uploader')}
-              className={`px-4 py-2 rounded-lg font-medium text-sm transition ${
-                activeTab === 'uploader'
-                  ? 'bg-cyan-600 text-white'
-                  : 'bg-gray-900 text-gray-400 border border-gray-800 hover:text-white'
-              }`}
-            >
-              Zip Analyzer
-            </button>
-
-            {/* Export */}
-            <button
-              onClick={async () => {
-                const res = await fetch('/api/export', {
-                  method: 'POST',
-                  headers: {
-                    'Content-Type': 'application/json',
-                  },
-                  body: JSON.stringify({
-                    codebase_context: analysisResult,
-                  }),
-                });
-
-                const blob = await res.blob();
-                const url = window.URL.createObjectURL(blob);
-
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = 'ongisa-architecture-report.md';
-                a.click();
-
-                window.URL.revokeObjectURL(url);
+            <input
+              type="text"
+              id="githubRepoInput"
+              placeholder="https://github.com/owner/repository"
+              className="bg-gray-950 border border-gray-800 rounded-lg px-3 py-2 text-xs text-white font-mono flex-1 focus:outline-none focus:border-cyan-500"
+              onKeyDown={(event) => {
+                if (event.key === 'Enter') {
+                  analyzeGitRepository();
+                }
               }}
-              className="bg-cyan-600 hover:bg-cyan-500 text-white px-3 py-1.5 rounded-lg text-xs font-semibold transition flex items-center gap-1.5"
+            />
+
+            <button
+              onClick={analyzeGitRepository}
+              className="bg-cyan-600 hover:bg-cyan-500 text-white px-4 py-2 rounded-lg text-xs font-semibold transition flex items-center gap-1.5"
             >
-              <span>📥</span>
-              Export Audit Report
+              <span>🚀</span>
+              Clone & Analyze
             </button>
 
-            {/* Refactor */}
-            <button
-              onClick={() => setActiveTab('refactor')}
-              className={`px-4 py-2 rounded-lg font-medium text-sm transition ${
-                activeTab === 'refactor'
-                  ? 'bg-cyan-600 text-white'
-                  : 'bg-gray-900 text-gray-400 border border-gray-800 hover:text-white'
-              }`}
-            >
-              Code Smells & Refactoring
-            </button>
           </div>
+
         </header>
 
         {/* =========================================================
@@ -264,6 +341,7 @@ export default function Home() {
                     ? 'Loading...'
                     : 'Function Call-Graph'}
                 </button>
+
               </div>
             </div>
 
@@ -330,6 +408,7 @@ export default function Home() {
                       {/* Call Graph Summary */}
                       <div className="bg-gray-900 border border-gray-800 rounded-xl p-4">
                         <div className="flex items-center justify-between">
+
                           <div>
                             <h3 className="text-sm font-semibold text-cyan-400">
                               Function Call References
@@ -343,6 +422,7 @@ export default function Home() {
                           <span className="text-xs font-mono bg-gray-950 border border-gray-800 px-2 py-1 rounded">
                             {callGraphData.length} calls
                           </span>
+
                         </div>
                       </div>
 
@@ -382,15 +462,19 @@ export default function Home() {
                                   {call.file}
                                 </p>
                               )}
+
                             </div>
                           ))}
 
                         </div>
                       </div>
+
                     </div>
                   )}
+
               </div>
             )}
+
           </div>
         )}
 
@@ -423,6 +507,7 @@ export default function Home() {
                   ? 'Analyzing Codebase...'
                   : 'Run Dry-Run Refactor'}
               </button>
+
             </div>
 
             {/* Detected Code Smells List */}
@@ -502,46 +587,6 @@ export default function Home() {
         {activeTab === 'uploader' && (
           <div className="py-4 space-y-6">
 
-            {/* Git Repository Analyzer */}
-            <div className="bg-gray-900 border border-gray-800 rounded-xl p-6">
-
-              <h2 className="text-xl font-bold text-cyan-400 mb-2">
-                Analyze Git Repository
-              </h2>
-
-              <p className="text-sm text-gray-400 mb-4">
-                Enter a public GitHub repository URL to clone and analyze
-                its architecture.
-              </p>
-
-              <div className="flex gap-2 items-center mb-4">
-
-                <input
-                  type="text"
-                  placeholder="https://github.com/username/repository"
-                  className="bg-gray-900 border border-gray-800 rounded-lg px-3 py-2 text-xs text-white font-mono flex-1"
-                  id="repoUrlInput"
-                />
-
-                <button
-                  onClick={async () => {
-                    const inputEl = document.getElementById(
-                      'repoUrlInput'
-                    ) as HTMLInputElement;
-
-                    if (!inputEl?.value) return;
-
-                    // Trigger API call to /api/analyze/git
-                  }}
-                  className="bg-cyan-600 hover:bg-cyan-500 text-white px-4 py-2 rounded-lg text-xs font-semibold transition"
-                >
-                  Clone & Analyze Repo
-                </button>
-
-              </div>
-
-            </div>
-
             {/* ZIP Analyzer */}
             <UploadDropzone
               onAnalysisComplete={handleAnalysisComplete}
@@ -612,3 +657,4 @@ export default function Home() {
     </main>
   );
 }
+
