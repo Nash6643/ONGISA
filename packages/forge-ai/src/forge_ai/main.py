@@ -185,19 +185,26 @@ class RepoCloneRequest(BaseModel):
 async def analyze_git_repo(req: RepoCloneRequest):
     repo_path = None
     try:
+        # Clone the repository using our GitCloner utility
         repo_path = GitCloner.clone_repository(req.repo_url)
-        # Run your existing analyzer logic over repo_path here...
+        
+        # Run call graph & analyzer over the cloned path
+        calls = analyze_directory_calls(repo_path)
         
         return {
             "status": "success",
             "message": f"Successfully cloned and analyzed repository from {req.repo_url}",
-            "repo_path": repo_path
+            "repo_path": repo_path,
+            "total_calls": len(calls),
+            "calls": calls[:50]
         }
     except Exception as e:
-        return {"status": "error", "message": str(e)}, 400
+        return {"status": "error", "message": str(e)}
     finally:
-        # Optional cleanup after analysis if needed, or keep for session
-        pass
+        # Optional: cleanup repo_path directory after extraction if desired, 
+        # or keep it cached for the session.
+        if repo_path and os.path.exists(repo_path):
+            shutil.rmtree(repo_path, ignore_errors=True)
 
 
 
