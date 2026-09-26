@@ -173,7 +173,7 @@ export default function Home() {
               </h1>
 
               <p className="text-sm text-gray-400 mt-1">
-                Omar Nashiru-deen GitHub Statistical Analyzer — Static analysis
+                ONGISA — Static analysis
                 & symbol tree mapping.
               </p>
             </div>

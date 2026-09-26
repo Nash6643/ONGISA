@@ -4,7 +4,6 @@ import React, { useMemo, useState } from 'react';
 import ReactFlow, {
   Background,
   Controls,
-  MiniMap,
   Node,
   Edge,
   useNodesState,
@@ -90,8 +89,7 @@ export default function DependencyGraph({ initialNodes = [], initialEdges = [] }
         >
           <Background color="#1e293b" gap={16} />
           <Controls className="bg-gray-900 border-gray-800 text-white fill-white" />
-          <MiniMap nodeColor="#0284c7" maskColor="rgba(15, 23, 42, 0.7)" className="bg-gray-900 border-gray-800" />
-        </ReactFlow>
+          </ReactFlow>
       </div>
 
       {/* Selected Node Details Drawer */}
