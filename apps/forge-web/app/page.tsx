@@ -245,6 +245,25 @@ export default function Home() {
                 Code Smells & Refactoring
               </button>
 
+              <button
+  onClick={async () => {
+    const res = await fetch('/api/refactor', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        file_path: 'src/services/UserManager.ts',
+        code_content: '// sample content or active file content',
+        issue_description: 'God Module detected: high function count and tight coupling.',
+      }),
+    });
+    const data = await res.json();
+    alert(data.refactoring_plan || 'Refactoring plan generated successfully!');
+  }}
+  className="bg-purple-600 hover:bg-purple-500 text-white px-3 py-1 rounded text-xs font-semibold transition flex items-center gap-1"
+>
+  <span>🛠️</span> AI Refactor Plan
+</button>
+
             </div>
           </div>
 
