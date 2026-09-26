@@ -15,6 +15,7 @@ from forge_analyzer.refactor import perform_ast_dry_run
 from forge_ai.agent import CodebaseAgent
 from fastapi.responses import PlainTextResponsesss
 from forge_analyzer.callgraph import analyze_directory_calls
+from forge_refactor.planner import RefactoringPlanner
 
 app = FastAPI(title="Forge API Engine")
 
@@ -206,7 +207,25 @@ async def analyze_git_repo(req: RepoCloneRequest):
         if repo_path and os.path.exists(repo_path):
             shutil.rmtree(repo_path, ignore_errors=True)
 
+refactor_planner = RefactoringPlanner()
 
+class RefactorRequest(BaseModel):
+    file_path: str
+    code_content: str
+    issue_description: str
+
+@app.post("/api/refactor/plan")
+async def create_refactoring_plan(req: RefactorRequest):
+    plan = refactor_planner.generate_refactoring_plan(
+        req.file_path, 
+        req.code_content, 
+        req.issue_description
+    )
+    return {
+        "status": "success",
+        "file_path": req.file_path,
+        "refactoring_plan": plan
+    }
 
     
 
