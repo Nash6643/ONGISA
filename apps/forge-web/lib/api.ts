@@ -13,6 +13,7 @@ export interface SmellAnalysisRequest {
 export interface SmellItem {
   type: string;
   message: string;
+  description?: string; // Added to support page.tsx issue.description
   line: number;
   severity: 'low' | 'medium' | 'high';
 }
@@ -69,5 +70,16 @@ export async function analyzeCodeSmells(payload: SmellAnalysisRequest): Promise<
     throw new Error(`Failed to analyze code smells: ${errorText}`);
   }
 
-  return response.json();
+  const data = await response.json();
+  
+  // Map message to description for backward compatibility with page.tsx issues
+  if (data.smells) {
+    data.smells = data.smells.map((s: SmellItem) => ({
+      ...s,
+      description: s.description || s.message,
+    }));
+    data.issues = data.smells;
+  }
+
+  return data;
 }
