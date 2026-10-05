@@ -1,64 +1,86 @@
-from typing import Dict, List, Any
+"""
+Advanced Code Smell and Anti-Pattern Detection Engine for ONGISA.
+"""
 
-def detect_circular_dependencies(edges: List[Dict[str, str]]) -> List[Dict[str, Any]]:
-    # Build adjacency list
-    adj = {}
-    for edge in edges:
-        src, tgt = edge["source"], edge["target"]
-        adj.setdefault(src, []).append(tgt)
+from typing import List, Dict, Any, Optional
+import ast
 
-    cycles = []
-    visited = set()
-    rec_stack = set()
+class CodeSmellDetector(ast.NodeVisitor):
+    def __init__(self, filepath: str, source_code: str):
+        self.filepath = filepath
+        self.source_code = source_code
+        self.smells: List[Dict[str, Any]] = []
+        self._current_depth = 0
+        self._max_depth = 0
 
-    def dfs(node, path):
-        visited.add(node)
-        rec_stack.add(node)
-        path.append(node)
+    def analyze(self) -> List[Dict[str, Any]]:
+        try:
+            tree = ast.parse(self.source_code, filename=self.filepath)
+            self.visit(tree)
+        except SyntaxError as e:
+            self.smells.append({
+                "type": "SyntaxError",
+                "message": f"Failed to parse file: {e}",
+                "line": e.lineno,
+                "severity": "high"
+            })
+        return self.smells
 
-        for neighbor in adj.get(node, []):
-            if neighbor not in visited:
-                dfs(neighbor, path)
-            elif neighbor in rec_stack:
-                cycle_start = path.index(neighbor)
-                cycle_path = path[cycle_start:] + [neighbor]
-                cycles.append({
-                    "type": "circular_dependency",
-                    "severity": "high",
-                    "nodes": cycle_path,
-                    "description": f"Circular dependency chain detected: {' -> '.join(cycle_path)}"
-                })
-
-        rec_stack.remove(node)
-        path.pop()
-
-    for node in list(adj.keys()):
-        if node not in visited:
-            dfs(node, [])
-
-    return cycles
-
-def analyze_code_smells(graph_data: Dict[str, Any]) -> List[Dict[str, Any]]:
-    nodes = graph_data.get("nodes", [])
-    edges = graph_data.get("edges", [])
-    issues = []
-
-    # 1. Circular Dependencies
-    issues.extend(detect_circular_dependencies(edges))
-
-    # 2. God Object / High In-Degree Detection
-    in_degree = {}
-    for edge in edges:
-        tgt = edge["target"]
-        in_degree[tgt] = in_degree.get(tgt, 0) + 1
-
-    for node_id, count in in_degree.items():
-        if count >= 5:  # Threshold for high coupling
-            issues.append({
-                "type": "high_coupling",
-                "severity": "medium",
-                "node": node_id,
-                "description": f"File '{node_id}' has {count} incoming dependencies (high coupling risk)."
+    def visit_FunctionDef(self, node: ast.FunctionDef) -> None:
+        # Check for Long Parameter Lists (> 5 parameters)
+        args_count = len(node.args.args) + len(node.args.kwonlyargs)
+        if args_count > 5:
+            self.smells.append({
+                "type": "LongParameterList",
+                "message": f"Function '{node.name}' has {args_count} parameters (recommended max is 5).",
+                "line": node.lineno,
+                "severity": "medium"
             })
 
-    return issues
+        # Check for Deep Nesting inside functions
+        previous_max_depth = self._max_depth
+        self._max_depth = 0
+        self._current_depth = 0
+        
+        for child in node.body:
+            self._check_nesting(child, depth=1)
+
+        if self._max_depth > 3:
+            self.smells.append({
+                "type": "DeepNesting",
+                "message": f"Function '{node.name}' contains deep control flow nesting (depth: {self._max_depth}).",
+                "line": node.lineno,
+                "severity": "high"
+            })
+            
+        self._max_depth = previous_max_depth
+        self.generic_visit(node)
+
+    def visit_ClassDef(self, node: ast.ClassDef) -> None:
+        # Check for Large Classes / God Objects (> 20 methods or > 300 lines)
+        methods = [n for n in node.body if isinstance(n, ast.FunctionDef)]
+        class_lines = node.end_lineno - node.lineno if hasattr(node, 'end_lineno') and node.end_lineno else 0
+        
+        if len(methods) > 20 or class_lines > 300:
+            self.smells.append({
+                "type": "GodClass",
+                "message": f"Class '{node.name}' is too large ({len(methods)} methods, ~{class_lines} lines). Consider splitting responsibilities.",
+                "line": node.lineno,
+                "severity": "high"
+            })
+            
+        self.generic_visit(node)
+
+    def _check_nesting(self, node: ast.AST, depth: int) -> None:
+        if isinstance(node, (ast.If, ast.For, ast.While, ast.Try, ast.With)):
+            if depth > self._max_depth:
+                self._max_depth = depth
+            for child in ast.iter_child_nodes(node):
+                self._check_nesting(child, depth + 1)
+        else:
+            for child in ast.iter_child_nodes(node):
+                self._check_nesting(child, depth)
+
+def detect_smells(filepath: str, source_code: str) -> List[Dict[str, Any]]:
+    detector = CodeSmellDetector(filepath, source_code)
+    return detector.analyze()
