@@ -34,6 +34,9 @@ export interface SmellAnalysisResponse {
   };
 }
 
+// Alias to match page.tsx import expectation
+export type AnalysisResult = SmellAnalysisResponse;
+
 /**
  * Sends source code to the backend for smell detection and refactoring plan generation.
  */
