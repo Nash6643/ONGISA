@@ -18,6 +18,23 @@ export interface SmellItem {
   severity: 'low' | 'medium' | 'high';
 }
 
+export async function fetchCallGraph(sourceCode: string, filePath: string) {
+  const response = await fetch('/api/graph', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ source_code: sourceCode, file_path: filePath }),
+  });
+
+  if (!response.ok) {
+    throw new Error('Failed to fetch call graph');
+  }
+
+  const data = await response.json();
+  return data.graph;
+}
+
 export interface RefactoringStep {
   action: string;
   target_line: number;
