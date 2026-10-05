@@ -24,18 +24,33 @@ export interface RefactoringStep {
   suggestion: string;
 }
 
-export interface SmellAnalysisResponse {
-  file_path: string;
-  smells: SmellItem[];
-  refactoring_plan: {
+export interface GraphNode {
+  id: string;
+  label: string;
+  type?: string;
+}
+
+export interface GraphEdge {
+  source: string;
+  target: string;
+}
+
+export interface AnalysisResult {
+  file_path?: string;
+  smells?: SmellItem[];
+  issues?: SmellItem[]; // Backward compatibility for page.tsx
+  graph?: {
+    nodes: GraphNode[];
+    edges: GraphEdge[];
+  };
+  refactoring_plan?: {
     file_path: string;
     total_smells: number;
     refactoring_steps: RefactoringStep[];
   };
 }
 
-// Alias to match page.tsx import expectation
-export type AnalysisResult = SmellAnalysisResponse;
+export type SmellAnalysisResponse = AnalysisResult;
 
 /**
  * Sends source code to the backend for smell detection and refactoring plan generation.
