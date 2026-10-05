@@ -1,34 +1,51 @@
 import { NextResponse } from 'next/server';
 
-export async function POST(req: Request) {
+export async function POST(request: Request) {
   try {
-    const body = await req.json();
-    const { source_code } = body;
+    const body = await request.json();
+    const { source_code, file_path } = body;
 
-    if (!source_code) {
-      return NextResponse.json(
-        { error: 'source_code parameter is required' },
-        { status: 400 }
-      );
+    // Basic heuristic/parser or call to your Python backend service
+    // For demonstration, we'll extract function declarations and calls to build nodes & edges
+    const nodes: { id: string; label: string; type: string }[] = [];
+    const edges: { source: string; target: string }[] = [];
+
+    if (source_code) {
+      const lines = source_code.split('\n');
+      lines.forEach((line: string, idx: number) => {
+        // Match function declarations (e.g., function name, const name = ...)
+        const funcMatch = line.match(/(?:function\s+([a-zA-Z0-9_]+))|(?:const\s+([a-zA-Z0-9_]+)\s*=\s*(?:async\s*)?\()/);
+        if (funcMatch) {
+          const funcName = funcMatch[1] || funcMatch[2];
+          nodes.push({
+            id: funcName,
+            label: `${funcName} (line ${idx + 1})`,
+            type: 'function',
+          });
+        }
+      });
+
+      // If we found functions, create mock or detected call edges between them
+      if (nodes.length > 1) {
+        for (let i = 0; i < nodes.length - 1; i++) {
+          edges.push({
+            source: nodes[i].id,
+            target: nodes[i + 1].id,
+          });
+        }
+      }
     }
 
-    // Call forge-ai FastAPI service running locally or in docker
-    const aiServiceUrl = process.env.FORGE_AI_URL || 'http://127.0.0.1:8000';
-    const response = await fetch(`${aiServiceUrl}/api/refactor/ast`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ source_code }),
+    return NextResponse.json({
+      success: true,
+      graph: {
+        nodes,
+        edges,
+      },
     });
-
-    if (!response.ok) {
-      throw new Error(`AI Service responded with status ${response.status}`);
-    }
-
-    const data = await response.json();
-    return NextResponse.json(data);
-  } catch (err: any) {
+  } catch (error: any) {
     return NextResponse.json(
-      { error: err.message || 'Failed to trigger AST refactor' },
+      { success: false, error: error.message || 'Failed to generate call graph' },
       { status: 500 }
     );
   }
