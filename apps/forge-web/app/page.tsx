@@ -5,6 +5,7 @@ import DependencyGraph from '@/components/DependencyGraph';
 import { UploadDropzone } from '@/components/UploadDropzone';
 import ArchitectureChatDrawer from '@/components/ArchitectureChatDrawer';
 import { AnalysisResult } from '@/lib/api';
+import RefactorModal from '@/components/RefactorModal';
 
 export default function Home() {
   const [activeTab, setActiveTab] = useState<
@@ -16,6 +17,14 @@ export default function Home() {
 
   const [isRefactoring, setIsRefactoring] = useState(false);
   const [refactorLog, setRefactorLog] = useState<string | null>(null);
+
+  // =========================================================
+  // REFACTOR MODAL & SOURCE CODE STATE
+  // =========================================================
+  const [isRefactorModalOpen, setIsRefactorModalOpen] = useState(false);
+  const [sourceCode, setSourceCode] = useState<string>(
+    '// Select or analyze a file to view source code content'
+  );
 
   // =========================================================
   // CALL GRAPH STATE
@@ -178,7 +187,7 @@ export default function Home() {
               </p>
             </div>
 
-            <div className="flex gap-2">
+            <div className="flex gap-2 flex-wrap items-center">
 
               {/* Topology */}
               <button
@@ -227,7 +236,7 @@ export default function Home() {
 
                   window.URL.revokeObjectURL(url);
                 }}
-                className="bg-cyan-600 hover:bg-cyan-500 text-white px-3 py-1.5 rounded-lg text-xs font-semibold transition flex items-center gap-1.5"
+                className="bg-cyan-600 hover:bg-cyan-500 text-white px-3 py-2 rounded-lg text-xs font-semibold transition flex items-center gap-1.5"
               >
                 <span>📥</span>
                 Export Audit Report
@@ -246,23 +255,23 @@ export default function Home() {
               </button>
 
               <button
-  onClick={async () => {
-    const res = await fetch('/api/refactor', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        file_path: 'src/services/UserManager.ts',
-        code_content: '// sample content or active file content',
-        issue_description: 'God Module detected: high function count and tight coupling.',
-      }),
-    });
-    const data = await res.json();
-    alert(data.refactoring_plan || 'Refactoring plan generated successfully!');
-  }}
-  className="bg-purple-600 hover:bg-purple-500 text-white px-3 py-1 rounded text-xs font-semibold transition flex items-center gap-1"
->
-  <span>🛠️</span> AI Refactor Plan
-</button>
+                onClick={async () => {
+                  const res = await fetch('/api/refactor', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                      file_path: 'src/services/UserManager.ts',
+                      code_content: '// sample content or active file content',
+                      issue_description: 'God Module detected: high function count and tight coupling.',
+                    }),
+                  });
+                  const data = await res.json();
+                  alert(data.refactoring_plan || 'Refactoring plan generated successfully!');
+                }}
+                className="bg-purple-600 hover:bg-purple-500 text-white px-3 py-2 rounded-lg text-xs font-semibold transition flex items-center gap-1"
+              >
+                <span>🛠️</span> AI Refactor Plan
+              </button>
 
             </div>
           </div>
@@ -497,7 +506,7 @@ export default function Home() {
         )}
 
         {/* =========================================================
-            REFACTOR TAB - ARCHITECTURAL ISSUES
+            REFACTOR TAB - ARCHITECTURAL ISSUES & AST REFACTORING
         ========================================================= */}
 
         {activeTab === 'refactor' && (
@@ -527,6 +536,24 @@ export default function Home() {
               </button>
 
             </div>
+
+            {/* Refactoring Plan Banner (if available) */}
+            {analysisResult?.refactoring_plan && (
+              <div className="flex items-center justify-between bg-gray-950 border border-gray-800 p-4 rounded-xl">
+                <div>
+                  <h4 className="text-sm font-semibold text-white">Refactoring Plan Available</h4>
+                  <p className="text-xs text-gray-400 mt-0.5">
+                    {analysisResult.refactoring_plan.refactoring_steps?.length || 0} recommended fixes found.
+                  </p>
+                </div>
+                <button
+                  onClick={() => setIsRefactorModalOpen(true)}
+                  className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white text-xs font-medium rounded-lg transition-all shadow-lg shadow-blue-600/25"
+                >
+                  Review Refactor Plan ✨
+                </button>
+              </div>
+            )}
 
             {/* Detected Code Smells List */}
             <div className="space-y-3">
@@ -614,56 +641,6 @@ export default function Home() {
         )}
 
         {/* =========================================================
-            REFACTOR TAB - AST AUTOMATED REFACTORING
-        ========================================================= */}
-
-        {activeTab === 'refactor' && (
-          <div className="bg-gray-900 border border-gray-800 rounded-xl p-6 space-y-4">
-
-            <div className="flex justify-between items-center">
-
-              <div>
-                <h2 className="text-xl font-bold text-cyan-400">
-                  AST Automated Refactoring
-                </h2>
-
-                <p className="text-sm text-gray-400">
-                  Run static analyzer transformations across your C++ /
-                  Python / Rust dependencies.
-                </p>
-              </div>
-
-              <button
-                onClick={runRefactorDryRun}
-                disabled={isRefactoring}
-                className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-sm font-semibold transition disabled:opacity-50"
-              >
-                {isRefactoring
-                  ? 'Analyzing Codebase...'
-                  : 'Run Dry-Run Refactor'}
-              </button>
-
-            </div>
-
-            <div className="bg-gray-950 border border-gray-800 rounded-lg p-4 font-mono text-xs max-h-96 overflow-y-auto">
-
-              {refactorLog ? (
-                <pre className="text-emerald-400 whitespace-pre-wrap">
-                  {refactorLog}
-                </pre>
-              ) : (
-                <p className="text-gray-600">
-                  Click "Run Dry-Run Refactor" to preview code smell
-                  updates...
-                </p>
-              )}
-
-            </div>
-
-          </div>
-        )}
-
-        {/* =========================================================
             ARCHITECTURE AI CHAT DRAWER
         ========================================================= */}
 
@@ -671,8 +648,21 @@ export default function Home() {
           analysisResult={analysisResult}
         />
 
+        {/* =========================================================
+            REFACTOR MODAL COMPONENT
+        ========================================================= */}
+        <RefactorModal
+          isOpen={isRefactorModalOpen}
+          onClose={() => setIsRefactorModalOpen(false)}
+          filePath={analysisResult?.refactoring_plan?.file_path || 'file.ts'}
+          originalCode={sourceCode}
+          steps={analysisResult?.refactoring_plan?.refactoring_steps || []}
+          onApply={() => {
+            console.log('Refactoring patch applied!');
+          }}
+        />
+
       </div>
     </main>
   );
 }
-
