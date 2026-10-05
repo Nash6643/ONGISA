@@ -40,7 +40,7 @@ export interface AnalysisResult {
   file_path?: string;
   smells?: SmellItem[];
   issues?: SmellItem[];
-  graph: {
+  graph?: {
     nodes: GraphNode[];
     edges: GraphEdge[];
   };
@@ -72,7 +72,6 @@ export async function analyzeCodeSmells(payload: SmellAnalysisRequest): Promise<
 
   const data = await response.json();
   
-  // Ensure graph and issues are always safely populated
   data.graph = data.graph || { nodes: [], edges: [] };
   if (data.smells) {
     data.smells = data.smells.map((s: SmellItem) => ({
