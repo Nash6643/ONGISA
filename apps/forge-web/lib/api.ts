@@ -13,7 +13,7 @@ export interface SmellAnalysisRequest {
 export interface SmellItem {
   type: string;
   message: string;
-  description?: string; // Added to support page.tsx issue.description
+  description?: string;
   line: number;
   severity: 'low' | 'medium' | 'high';
 }
@@ -39,8 +39,8 @@ export interface GraphEdge {
 export interface AnalysisResult {
   file_path?: string;
   smells?: SmellItem[];
-  issues?: SmellItem[]; // Backward compatibility for page.tsx
-  graph?: {
+  issues?: SmellItem[];
+  graph: {
     nodes: GraphNode[];
     edges: GraphEdge[];
   };
@@ -72,13 +72,16 @@ export async function analyzeCodeSmells(payload: SmellAnalysisRequest): Promise<
 
   const data = await response.json();
   
-  // Map message to description for backward compatibility with page.tsx issues
+  // Ensure graph and issues are always safely populated
+  data.graph = data.graph || { nodes: [], edges: [] };
   if (data.smells) {
     data.smells = data.smells.map((s: SmellItem) => ({
       ...s,
       description: s.description || s.message,
     }));
     data.issues = data.smells;
+  } else {
+    data.issues = data.issues || [];
   }
 
   return data;
