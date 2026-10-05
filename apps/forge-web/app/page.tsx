@@ -35,6 +35,8 @@ export default function Home() {
   >('dependencies');
 
   const [callGraphData, setCallGraphData] = useState<any[]>([]);
+  const [callGraphNodes, setCallGraphNodes] = useState<any[]>([]);
+  const [callGraphEdges, setCallGraphEdges] = useState<any[]>([]);
   const [isLoadingCallGraph, setIsLoadingCallGraph] = useState(false);
 
   // =========================================================
@@ -46,6 +48,8 @@ export default function Home() {
     setActiveTab('topology');
     setViewMode('dependencies');
     setCallGraphData([]);
+    setCallGraphNodes([]);
+    setCallGraphEdges([]);
   };
 
   // =========================================================
@@ -78,12 +82,57 @@ export default function Home() {
 
       if (data.calls) {
         setCallGraphData(data.calls);
+
+        const nodeMap = new Map();
+        const edges: any[] = [];
+
+        data.calls.forEach((call: any, index: number) => {
+          const caller =
+            call.caller || call.from || call.source || 'Unknown';
+          const callee =
+            call.callee || call.to || call.target || 'Unknown';
+
+          if (!nodeMap.has(caller)) {
+            nodeMap.set(caller, {
+              id: caller,
+              data: { label: caller },
+              position: { x: (index * 60) % 500, y: (index * 40) % 400 },
+            });
+          }
+          if (!nodeMap.has(callee)) {
+            nodeMap.set(callee, {
+              id: callee,
+              data: { label: callee },
+              position: {
+                x: ((index + 1) * 60) % 500,
+                y: ((index + 1) * 40) % 400,
+              },
+            });
+          }
+
+          edges.push({
+            id: `edge-${caller}-${callee}-${index}`,
+            source: caller,
+            target: callee,
+            animated: true,
+          });
+        });
+
+        setCallGraphNodes(Array.from(nodeMap.values()));
+        setCallGraphEdges(edges);
+      } else if (data.nodes && data.edges) {
+        setCallGraphNodes(data.nodes);
+        setCallGraphEdges(data.edges);
       } else {
         setCallGraphData([]);
+        setCallGraphNodes([]);
+        setCallGraphEdges([]);
       }
     } catch (error) {
       console.error('Call graph error:', error);
       setCallGraphData([]);
+      setCallGraphNodes([]);
+      setCallGraphEdges([]);
     } finally {
       setIsLoadingCallGraph(false);
     }
@@ -389,116 +438,16 @@ export default function Home() {
 
             {viewMode === 'calls' && (
               <div className="space-y-3">
-
-                {!analysisResult && (
-                  <div className="bg-gray-900 border border-gray-800 rounded-xl p-8 text-center">
-                    <p className="text-gray-400 text-sm">
-                      Upload and analyze a repository first to generate
-                      the function call graph.
-                    </p>
+                {isLoadingCallGraph ? (
+                  <div className="bg-gray-900 border border-gray-800 p-8 rounded-xl text-center text-gray-400">
+                    Analyzing call hierarchy...
                   </div>
+                ) : (
+                  <DependencyGraph
+                    initialNodes={callGraphNodes || []}
+                    initialEdges={callGraphEdges || []}
+                  />
                 )}
-
-                {isLoadingCallGraph && (
-                  <div className="bg-gray-900 border border-gray-800 rounded-xl p-8 text-center">
-                    <div className="text-cyan-400 text-sm font-medium">
-                      ⚡ Analyzing function call references...
-                    </div>
-
-                    <p className="text-gray-500 text-xs mt-2">
-                      ONGISA is building the function-level call graph.
-                    </p>
-                  </div>
-                )}
-
-                {!isLoadingCallGraph &&
-                  analysisResult &&
-                  callGraphData.length === 0 && (
-                    <div className="bg-gray-900 border border-gray-800 rounded-xl p-8 text-center">
-                      <p className="text-gray-400 text-sm">
-                        No function call references were returned.
-                      </p>
-
-                      <button
-                        onClick={fetchCallGraph}
-                        className="mt-4 px-4 py-2 bg-cyan-600 hover:bg-cyan-500 rounded-lg text-xs font-semibold transition"
-                      >
-                        Retry Call Graph
-                      </button>
-                    </div>
-                  )}
-
-                {!isLoadingCallGraph &&
-                  callGraphData.length > 0 && (
-                    <div className="space-y-4">
-
-                      {/* Call Graph Summary */}
-                      <div className="bg-gray-900 border border-gray-800 rounded-xl p-4">
-                        <div className="flex items-center justify-between">
-
-                          <div>
-                            <h3 className="text-sm font-semibold text-cyan-400">
-                              Function Call References
-                            </h3>
-
-                            <p className="text-xs text-gray-500 mt-1">
-                              {callGraphData.length} call references detected.
-                            </p>
-                          </div>
-
-                          <span className="text-xs font-mono bg-gray-950 border border-gray-800 px-2 py-1 rounded">
-                            {callGraphData.length} calls
-                          </span>
-
-                        </div>
-                      </div>
-
-                      {/* Call Graph Data */}
-                      <div className="bg-gray-900 border border-gray-800 rounded-xl p-4">
-                        <div className="space-y-2">
-
-                          {callGraphData.map((call, index) => (
-                            <div
-                              key={index}
-                              className="bg-gray-950 border border-gray-800 rounded-lg p-3"
-                            >
-                              <div className="flex items-center gap-3">
-
-                                <span className="text-cyan-400 font-mono text-xs">
-                                  {call.caller ||
-                                    call.from ||
-                                    call.source ||
-                                    'Unknown'}
-                                </span>
-
-                                <span className="text-gray-600">
-                                  →
-                                </span>
-
-                                <span className="text-emerald-400 font-mono text-xs">
-                                  {call.callee ||
-                                    call.to ||
-                                    call.target ||
-                                    'Unknown'}
-                                </span>
-
-                              </div>
-
-                              {call.file && (
-                                <p className="text-[10px] text-gray-600 mt-2 font-mono">
-                                  {call.file}
-                                </p>
-                              )}
-
-                            </div>
-                          ))}
-
-                        </div>
-                      </div>
-
-                    </div>
-                  )}
-
               </div>
             )}
 
