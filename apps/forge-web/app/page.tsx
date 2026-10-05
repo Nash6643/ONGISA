@@ -367,11 +367,10 @@ export default function Home() {
             {/* =====================================================
                 DEPENDENCY GRAPH
             ===================================================== */}
-
             {viewMode === 'dependencies' && (
               <DependencyGraph
-                initialNodes={analysisResult?.graph.nodes}
-                initialEdges={analysisResult?.graph.edges}
+                initialNodes={(analysisResult?.graph?.nodes || []) as any}
+                initialEdges={(analysisResult?.graph?.edges || []) as any}
               />
             )}
 
