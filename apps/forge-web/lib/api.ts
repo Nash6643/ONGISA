@@ -10,6 +10,37 @@ export interface SmellAnalysisRequest {
   source_code: string;
 }
 
+export interface RefactorApplyRequest {
+  file_path: string;
+  source_code: string;
+  steps: RefactoringStep[];
+}
+
+export interface RefactorApplyResponse {
+  success: boolean;
+  file_path: string;
+  original_code: string;
+  refactored_code: string;
+  message: string;
+}
+
+export async function applyRefactoringPatch(payload: RefactorApplyRequest): Promise<RefactorApplyResponse> {
+  const response = await fetch(`${API_BASE_URL}/api/refactor/apply`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`Failed to apply refactoring patch: ${errorText}`);
+  }
+
+  return response.json();
+}
+
 export interface SmellItem {
   type: string;
   message: string;
