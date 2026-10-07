@@ -17,6 +17,10 @@ from rich.panel import Panel
 from rich.tree import Tree
 from rich.table import Table
 from rich.prompt import Prompt
+import argparse
+import sys
+import requests
+import json
 
 from forge_core.cloner import WorkspaceManager
 from forge_core.schemas import FileNode
@@ -83,6 +87,57 @@ def render_terminal_dependency_graph(console: Console, dep_graph: DependencyGrap
                 source_branch.add(f"└── [magenta]📦 {target}[/magenta] [dim](external/lib)[/dim]")
 
     console.print(Panel(graph_tree, title="[bold white]Codebase Dependency Graph[/bold white]", border_style="cyan"))
+
+API_URL = "http://localhost:8000/api/analyze/smells"
+
+def main():
+    parser = argparse.ArgumentParser(description="ONGISA CLI: AI-Powered Codebase Analyzer & Refactoring Forge")
+    subparsers = parser.add_subparsers(dest="command", help="Available commands")
+
+    # Analyze command
+    analyze_parser = subparsers.add_parser("analyze", help="Analyze a local source file for code smells")
+    analyze_parser.add_argument("file", help="Path to the source file to analyze")
+
+    args = parser.parse_args()
+
+    if args.command == "analyze":
+        print(f"🔍 Analyzing {args.file}...")
+        try:
+            with open(args.file, "r", encoding="utf-8") as f:
+                source_code = f.read()
+
+            payload = {
+                "file_path": args.file,
+                "source_code": source_code
+            }
+
+            response = requests.post(API_URL, json=payload)
+            if response.status_code == 200:
+                data = response.json()
+                smells = data.get("smells", [])
+                plan = data.get("refactoring_plan", {})
+                
+                print(f"\n✨ Analysis Complete! Found {len(smells)} code smell(s).\n")
+                for smell in smells:
+                    print(f"  [{smell['severity'].upper()}] Line {smell['line']}: {smell['type']}")
+                    print(f"    -> {smell['message']}\n")
+
+                if plan.get("refactoring_steps"):
+                    print("💡 Suggested Refactoring Steps:")
+                    for step in plan["refactoring_steps"]:
+                        print(f"  • [{step['action']}] Line {step['target_line']}: {step['suggestion']}")
+            else:
+                print(f"❌ Server Error: {response.text}", file=sys.stderr)
+                sys.exit(1)
+
+        except Exception as e:
+            print(f"❌ Error reading file or connecting to API: {e}", file=sys.stderr)
+            sys.exit(1)
+    else:
+        parser.print_help()
+
+if __name__ == "__main__":
+    main()
 
 
 def _parse_file_content(ts_parser: MultiLangParser, fallback_parser: CodeParser, file_path: str, content: str, ext: str):
