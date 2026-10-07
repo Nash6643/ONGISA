@@ -107,10 +107,10 @@ export async function analyzeRepositoryZip(zipFile: File): Promise<AnalysisResul
   const formData = new FormData();
   formData.append('file', zipFile);
 
-  const response = await `${API_BASE_URL}/api/analyze/zip`, {
+  const response = await fetch(`${API_BASE_URL}/api/analyze/zip`, {
     method: 'POST',
     body: formData,
-  };
+  });
 
   if (!response.ok) {
     const errorText = await response.text();
