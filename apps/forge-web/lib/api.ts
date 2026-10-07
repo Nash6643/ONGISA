@@ -102,3 +102,20 @@ export async function analyzeCodeSmells(payload: SmellAnalysisRequest): Promise<
 
   return data;
 }
+
+export async function analyzeRepositoryZip(zipFile: File): Promise<AnalysisResult> {
+  const formData = new FormData();
+  formData.append('file', zipFile);
+
+  const response = await `${API_BASE_URL}/api/analyze/zip`, {
+    method: 'POST',
+    body: formData,
+  };
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`Failed to analyze repository zip: ${errorText}`);
+  }
+
+  return response.json();
+}
