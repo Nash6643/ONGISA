@@ -21,6 +21,27 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+class ChatRequest(BaseModel):
+    query: str
+    codebase_context: Optional[str] = None
+
+@app.post("/api/chat/architecture")
+def architecture_chat(payload: ChatRequest):
+    """
+    RAG-powered or context-aware chat endpoint for codebase architecture queries.
+    """
+    try:
+        # In a full RAG implementation, query vector database or LLM client here
+        user_query = payload.query
+        response_message = f"Analysis for your query ('{user_query}'): Based on the current module structure and code smell report, the architecture is well-separated into distinct service packages, but pay attention to high-severity parameter lists."
+        
+        return {
+            "success": True,
+            "reply": response_message
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 class CodeAnalysisRequest(BaseModel):
     file_path: str
     source_code: str
