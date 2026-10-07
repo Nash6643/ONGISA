@@ -11,6 +11,21 @@ interface ChatDrawerProps {
   analysisResult: any;
 }
 
+export async function sendArchitectureQuery(query: string, codebaseContext?: string) {
+  const response = await fetch('http://localhost:8000/api/chat/architecture', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ query, codebase_context: codebaseContext }),
+  });
+
+  if (!response.ok) {
+    throw new Error('Failed to fetch AI response');
+  }
+
+  const data = await response.json();
+  return data.reply;
+}
+
 export default function ArchitectureChatDrawer({ analysisResult }: ChatDrawerProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>([
