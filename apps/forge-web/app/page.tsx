@@ -6,6 +6,7 @@ import { UploadDropzone } from '@/components/UploadDropzone';
 import ArchitectureChatDrawer from '@/components/ArchitectureChatDrawer';
 import { AnalysisResult } from '@/lib/api';
 import RefactorModal from '@/components/RefactorModal';
+import { applyRefactoringPatch } from '@/lib/api';
 
 export default function Home() {
   const [activeTab, setActiveTab] = useState<
@@ -25,6 +26,8 @@ export default function Home() {
   const [sourceCode, setSourceCode] = useState<string>(
     '// Select or analyze a file to view source code content'
   );
+  const [refactoredCode, setRefactoredCode] = useState<string>('');
+  const [isApplyingRefactor, setIsApplyingRefactor] = useState<boolean>(false);
 
   // =========================================================
   // CALL GRAPH STATE
@@ -605,9 +608,23 @@ export default function Home() {
           onClose={() => setIsRefactorModalOpen(false)}
           filePath={analysisResult?.refactoring_plan?.file_path || 'file.ts'}
           originalCode={sourceCode}
+          refactoredCode={refactoredCode || sourceCode}
           steps={analysisResult?.refactoring_plan?.refactoring_steps || []}
-          onApply={() => {
-            console.log('Refactoring patch applied!');
+          onApply={async () => {
+            try {
+              setIsApplyingRefactor(true);
+              const res = await applyRefactoringPatch({
+                file_path: analysisResult?.refactoring_plan?.file_path || 'file.ts',
+                source_code: sourceCode,
+                steps: analysisResult?.refactoring_plan?.refactoring_steps || [],
+              });
+              setRefactoredCode(res.refactored_code);
+              console.log('Refactoring patch compiled successfully!');
+            } catch (err) {
+              console.error('Failed to apply refactoring patch:', err);
+            } finally {
+              setIsApplyingRefactor(false);
+            }
           }}
         />
 
