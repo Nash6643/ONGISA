@@ -1,22 +1,24 @@
 version: '3.8'
 
 services:
-  api:
+  forge-api:
     build:
-      context: .
-      dockerfile: Dockerfile.api
+      context: ./packages/forge-api
+      dockerfile: Dockerfile
     ports:
       - "8000:8000"
     environment:
-      - PYTHONUNBUFFERED=1
+      - PORT=8000
+    restart: always
 
-  web:
+  forge-web:
     build:
       context: ./apps/forge-web
       dockerfile: Dockerfile
     ports:
       - "3000:3000"
     environment:
-      - FORGE_AI_URL=http://api:8000
+      - NEXT_PUBLIC_API_URL=http://localhost:8000
     depends_on:
-      - api
+      - forge-api
+    restart: always
