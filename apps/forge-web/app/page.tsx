@@ -7,6 +7,7 @@ import ArchitectureChatDrawer from '@/components/ArchitectureChatDrawer';
 import { AnalysisResult } from '@/lib/api';
 import RefactorModal from '@/components/RefactorModal';
 import { applyRefactoringPatch } from '@/lib/api';
+import { downloadAnalysisReport } from '@/lib/export';
 
 export default function Home() {
   const [activeTab, setActiveTab] = useState<
@@ -26,6 +27,7 @@ export default function Home() {
   const [sourceCode, setSourceCode] = useState<string>(
     '// Select or analyze a file to view source code content'
   );
+  const [selectedFilePath, setSelectedFilePath] = useState<string | null>(null);
   const [refactoredCode, setRefactoredCode] = useState<string>('');
   const [isApplyingRefactor, setIsApplyingRefactor] = useState<boolean>(false);
 
@@ -265,34 +267,15 @@ export default function Home() {
                 Zip Analyzer
               </button>
 
-              {/* Export */}
-              <button
-                onClick={async () => {
-                  const res = await fetch('/api/export', {
-                    method: 'POST',
-                    headers: {
-                      'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                      codebase_context: analysisResult,
-                    }),
-                  });
-
-                  const blob = await res.blob();
-                  const url = window.URL.createObjectURL(blob);
-
-                  const a = document.createElement('a');
-                  a.href = url;
-                  a.download = 'ongisa-architecture-report.md';
-                  a.click();
-
-                  window.URL.revokeObjectURL(url);
-                }}
-                className="bg-cyan-600 hover:bg-cyan-500 text-white px-3 py-2 rounded-lg text-xs font-semibold transition flex items-center gap-1.5"
-              >
-                <span>📥</span>
-                Export Audit Report
-              </button>
+              {/* Export Report */}
+              {analysisResult && (
+                <button
+                  onClick={() => downloadAnalysisReport(analysisResult, selectedFilePath || 'source.ts')}
+                  className="px-4 py-2 bg-gray-800 hover:bg-gray-700 text-gray-200 text-xs font-medium rounded-xl border border-gray-700 transition-all flex items-center gap-2 shadow-sm"
+                >
+                  📥 Export Report (.md)
+                </button>
+              )}
 
               {/* Refactor */}
               <button
