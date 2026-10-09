@@ -322,7 +322,7 @@ Repository cloning and broader Git-based ingestion are part of the project's ong
 
 ## 🤖 AI Codebase Intelligence
 
-ONGISA includes an AI layer powered by Google's Gemini API.
+ONGISA also includes an AI layer powered by Google's Gemini API.
 
 Rather than blindly sending an entire repository to an LLM, the AI layer works with the **structured information produced by ONGISA's analysis pipeline**.
 
