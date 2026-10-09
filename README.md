@@ -8,7 +8,7 @@ It analyzes a codebase, maps its files, modules, imports, and dependencies, dete
 
 Large codebases can become difficult to understand as the number of files, modules, and dependencies grows. Instead of manually searching through files and tracing connections, ONGISA builds an architectural picture of the project and helps developers answer questions such as:
 
-* What does this file depend on?
+* What does the file depend on?
 * What depends on this module?
 * Which modules are highly connected?
 * Are there circular dependencies?
