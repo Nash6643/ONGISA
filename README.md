@@ -285,7 +285,7 @@ Application
 legacyPayments.ts
 ```
 
-A disconnected module can then be investigated to determine whether it is unused, obsolete, or intentionally isolated.
+A disconnected module can subsequently undergo rigorous investigation to definitively determine whether it is completely unutilized, technologically obsolete, or deliberately isolated for specific architectural or security purposes.
 
 ---
 
