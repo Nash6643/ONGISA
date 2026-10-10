@@ -4,7 +4,7 @@
 
 ONGISA is a developer tool designed to give developers a clear view of how a software project is built.
 
-It analyzes a codebase, maps its files, modules, imports, and dependencies, detects architectural problems, visualizes the structure as a dependency graph, and uses AI to help developers understand and improve the system.
+It analyzes a codebase, maps its files, modules, imports, and dependencies, detects architectural problems, visualizes the structure as a dependency graph, and also uses AI to help developers understand and improve the system.
 
 Large codebases can become difficult to understand as the number of files, modules, and dependencies grows. Instead of manually searching through files and tracing connections, ONGISA builds an architectural picture of the project and helps developers answer questions such as:
 
