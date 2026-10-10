@@ -461,13 +461,13 @@ Proposed Changes
 Developer Review
 ```
 
-The project uses a **dry-run approach** so proposed changes can be inspected before being applied.
+The project uses a **dry-run approach** so proposed changes can be inspected before even being applied.
 
 ---
 
 # 🖥️ CLI
 
-ONGISA includes a developer-facing CLI architecture.
+ONGISA also includes a developer-facing CLI architecture.
 
 Current commands include:
 
