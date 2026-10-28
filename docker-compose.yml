@@ -1,4 +1,4 @@
-version: '3.80'
+version: '3.8'
 
 services:
   forge-api:
@@ -7,11 +7,9 @@ services:
       dockerfile: Dockerfile
     ports:
       - "8000:8000"
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/docs"]
-      interval: 10s
-      timeout: 5s
-      retries: 3
+    environment:
+      - PORT=8000
+      - GITHUB_TOKEN=${GITHUB_TOKEN}
     restart: always
 
   forge-web:
@@ -23,11 +21,5 @@ services:
     environment:
       - NEXT_PUBLIC_API_URL=http://localhost:8000
     depends_on:
-<<<<<<< HEAD
       - forge-api
     restart: always
-=======
-      forge-api:
-        condition: service_healthy
-    restart: always
->>>>>>> 902dc00 (refactor(infra): add container health checks and robust startup dependencies in docker-compose)
