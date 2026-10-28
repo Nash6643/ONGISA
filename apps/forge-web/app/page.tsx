@@ -6,6 +6,7 @@ import { UploadDropzone } from '@/components/UploadDropzone';
 import ArchitectureChatDrawer from '@/components/ArchitectureChatDrawer';
 import { AnalysisResult } from '@/lib/api';
 import RefactorModal from '@/components/RefactorModal';
+import GitHubImportModal from '@/components/GitHubImportModal';
 import { applyRefactoringPatch } from '@/lib/api';
 import { downloadAnalysisReport } from '@/lib/export';
 
@@ -19,6 +20,11 @@ export default function Home() {
 
   const [isRefactoring, setIsRefactoring] = useState(false);
   const [refactorLog, setRefactorLog] = useState<string | null>(null);
+
+  // =========================================================
+  // GITHUB IMPORT MODAL STATE
+  // =========================================================
+  const [isGitHubImportModalOpen, setIsGitHubImportModalOpen] = useState(false);
 
   // =========================================================
   // REFACTOR MODAL & SOURCE CODE STATE
@@ -312,7 +318,7 @@ export default function Home() {
           </div>
 
           {/* =========================================================
-              GITHUB REPOSITORY INPUT
+              GITHUB REPOSITORY INPUT & IMPORT MODAL TRIGGER
           ========================================================= */}
 
           <div className="flex gap-2 items-center bg-gray-900 p-2 rounded-xl border border-gray-800 mt-6">
@@ -335,6 +341,14 @@ export default function Home() {
             >
               <span>🚀</span>
               Clone & Analyze
+            </button>
+
+            <button
+              onClick={() => setIsGitHubImportModalOpen(true)}
+              className="bg-gray-800 hover:bg-gray-700 text-cyan-400 border border-gray-700 px-4 py-2 rounded-lg text-xs font-semibold transition flex items-center gap-1.5"
+            >
+              <span>📦</span>
+              GitHub Import Modal
             </button>
 
           </div>
@@ -610,6 +624,18 @@ export default function Home() {
             }
           }}
         />
+
+        {/* =========================================================
+            GITHUB IMPORT MODAL COMPONENT
+        ========================================================= */}
+          <GitHubImportModal
+            isOpen={isGitHubImportModalOpen}
+            onClose={() => setIsGitHubImportModalOpen(false)}
+            onSuccess={(result) => {
+              handleAnalysisComplete(result);
+              setIsGitHubImportModalOpen(false);
+            }}
+          />
 
       </div>
     </main>
