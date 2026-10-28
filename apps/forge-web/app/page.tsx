@@ -6,7 +6,7 @@ import { UploadDropzone } from '@/components/UploadDropzone';
 import ArchitectureChatDrawer from '@/components/ArchitectureChatDrawer';
 import { AnalysisResult } from '@/lib/api';
 import RefactorModal from '@/components/RefactorModal';
-import GitHubImportModal from '@/components/GitHubImportModal';
+import GitHubImportModal from '@/components/GithubImportModal';
 import { applyRefactoringPatch } from '@/lib/api';
 import { downloadAnalysisReport } from '@/lib/export';
 

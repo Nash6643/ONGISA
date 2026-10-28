@@ -6,6 +6,7 @@ import { analyzeGitHubRepository } from '@/lib/github_api';
 interface GitHubImportModalProps {
   isOpen: boolean;
   onClose: () => void;
+  onSuccess?: (result: any) => void; // Add this line
 }
 
 export default function GitHubImportModal({ isOpen, onClose }: GitHubImportModalProps) {
