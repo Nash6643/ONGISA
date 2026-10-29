@@ -5,7 +5,28 @@ Translates detected code smells into actionable, step-by-step refactoring plans.
 
 from typing import List, Dict, Any
 
+class RefactorPlanner:
+    """
+    Stub planner for handling individual smell reports (e.g., Long Method splitting).
+    """
+    def plan_refactoring(self, smell_report: Dict[str, Any]) -> List[Dict[str, Any]]:
+        plan = []
+        smell_type = smell_report.get("smell") or smell_report.get("type")
+        if smell_type == "LongMethod":
+            plan.append({
+                "action": "extract_method",
+                "target_line": smell_report.get("line"),
+                "status": "planned",
+                "description": smell_report.get("message", "Method exceeds recommended length threshold."),
+                "suggestion": "Extract cohesive segments of the long method into smaller helper functions."
+            })
+        return plan
+
+
 class RefactoringPlanner:
+    """
+    Comprehensive automated refactoring planner for batch-translating multiple code smells.
+    """
     def __init__(self, file_path: str, smells: List[Dict[str, Any]]):
         self.file_path = file_path
         self.smells = smells
@@ -13,7 +34,7 @@ class RefactoringPlanner:
     def generate_plan(self) -> Dict[str, Any]:
         steps = []
         for smell in self.smells:
-            smell_type = smell.get("type")
+            smell_type = smell.get("type") or smell.get("smell")
             line = smell.get("line", 0)
             message = smell.get("message", "")
             
@@ -28,7 +49,14 @@ class RefactoringPlanner:
         }
 
     def _translate_smell_to_step(self, smell_type: str, line: int, message: str) -> Dict[str, Any]:
-        if smell_type == "DeepNesting":
+        if smell_type == "LongMethod":
+            return {
+                "action": "EXTRACT_METHOD",
+                "target_line": line,
+                "description": f"Split long method: {message}",
+                "suggestion": "Extract portions of this long method into smaller, dedicated helper methods."
+            }
+        elif smell_type == "DeepNesting":
             return {
                 "action": "DECOMPOSE_CONDITIONAL_OR_EXTRACT",
                 "target_line": line,
