@@ -1,22 +1,28 @@
 """
 FastAPI Main Application for ONGISA API.
-Provides endpoints for code analysis, smell detection, and refactoring planning.
+Provides endpoints for code analysis, smell detection, health metrics, and refactoring planning.
 """
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-from typing import List
+from typing import List, Optional
 
 import zipfile
 import tempfile
 import os
-from fastapi import UploadFile, File
 
 from forge_analyzer.smells import detect_smells
 from forge_refactor.planner import create_refactoring_plan
 
-app = FastAPI(title="ONGISA API", version="1.0.0")
+# Import modular routers (Metrics & Health)
+try:
+    from forge_api.routers import metrics, health
+except ImportError:
+    metrics = None
+    health = None
+
+app = FastAPI(title="ONGISA Forge API", version="1.0.0")
 
 # Enable CORS for frontend integration (apps/forge-web)
 app.add_middleware(
@@ -27,10 +33,18 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Mount modular routers if available
+if metrics and hasattr(metrics, "router"):
+    app.include_router(metrics.router)
+if health and hasattr(health, "router"):
+    app.include_router(health.router)
+
+
 class RefactorApplyRequest(BaseModel):
     file_path: str
     source_code: str
     steps: List[dict]
+
 
 @app.post("/api/refactor/apply")
 def apply_refactoring_patch(payload: RefactorApplyRequest):
@@ -41,16 +55,11 @@ def apply_refactoring_patch(payload: RefactorApplyRequest):
         source_code = payload.source_code
         lines = source_code.split("\n")
         
-        # Simple heuristic / AST-based refactoring simulator or LLM transformation hook
-        # For instance, addressing long parameter lists or clean-up actions
         refacted_lines = lines.copy()
         
-        # Example transformation logic for demonstration:
-        # If a line has excessive indentation or long parameter declarations, streamline it
         for step in payload.steps:
             target_line = step.get("target_line", 1) - 1
             if 0 <= target_line < len(refacted_lines):
-                # Add a clean refactored comment marker or apply suggestion patch
                 action = step.get("action", "")
                 if "parameter" in action.lower():
                     refacted_lines[target_line] = f"    # Refactored: {step.get('suggestion')}"
@@ -68,6 +77,7 @@ def apply_refactoring_patch(payload: RefactorApplyRequest):
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to apply refactoring patch: {str(e)}")
+
 
 @app.post("/api/analyze/zip")
 async def analyze_repository_zip(file: UploadFile = File(...)):
@@ -87,16 +97,13 @@ async def analyze_repository_zip(file: UploadFile = File(...)):
         with tempfile.TemporaryDirectory() as temp_dir:
             zip_path = os.path.join(temp_dir, file.filename)
             
-            # Save uploaded zip
             contents = await file.read()
             with open(zip_path, "wb") as f:
                 f.write(contents)
 
-            # Extract zip contents
             with zipfile.ZipFile(zip_path, "r") as zip_ref:
                 zip_ref.extractall(temp_dir)
 
-            # Walk through extracted files
             for root, _, files in os.walk(temp_dir):
                 for filename in files:
                     if filename.endswith((".py", ".js", ".ts", ".tsx")):
@@ -114,7 +121,6 @@ async def analyze_repository_zip(file: UploadFile = File(...)):
                             with open(full_path, "r", encoding="utf-8", errors="ignore") as code_file:
                                 source_code = code_file.read()
 
-                            # Run smell detection if Python file
                             if filename.endswith(".py"):
                                 smells = detect_smells(rel_path, source_code)
                                 for smell in smells:
@@ -139,9 +145,11 @@ async def analyze_repository_zip(file: UploadFile = File(...)):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to process archive: {str(e)}")
 
+
 class ChatRequest(BaseModel):
     query: str
     codebase_context: Optional[str] = None
+
 
 @app.post("/api/chat/architecture")
 def architecture_chat(payload: ChatRequest):
@@ -149,7 +157,6 @@ def architecture_chat(payload: ChatRequest):
     RAG-powered or context-aware chat endpoint for codebase architecture queries.
     """
     try:
-        # In a full RAG implementation, query vector database or LLM client here
         user_query = payload.query
         response_message = f"Analysis for your query ('{user_query}'): Based on the current module structure and code smell report, the architecture is well-separated into distinct service packages, but pay attention to high-severity parameter lists."
         
@@ -160,13 +167,17 @@ def architecture_chat(payload: ChatRequest):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+
 class CodeAnalysisRequest(BaseModel):
     file_path: str
     source_code: str
 
+
 @app.get("/health")
 def health_check():
+    """Fallback health check endpoint if health router is unmounted."""
     return {"status": "healthy", "service": "forge-api"}
+
 
 @app.post("/api/analyze/smells")
 def analyze_code_smells(payload: CodeAnalysisRequest):
@@ -184,6 +195,3 @@ def analyze_code_smells(payload: CodeAnalysisRequest):
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-    
-
-    
