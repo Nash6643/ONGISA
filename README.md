@@ -1005,7 +1005,7 @@ Refactoring should be treated as a controlled process. ONGISA favors analysis, p
 
 ### 5. Keep the Developer in Control
 
-ONGISA is designed to **assist developers, not replace their decisions**. Developers remain in control of what changes are accepted, rejected, or applied to their codebase.
+ONGISA is also designed to **assist developers, not replace their decisions**. Developers remain in control of what changes are accepted, rejected, or applied to their codebase.
 
 
 # 🎯 The Problem ONGISA Solves
