@@ -291,7 +291,7 @@ A disconnected module can then be investigated to determine whether it is unused
 
 # 📦 Repository Ingestion
 
-ONGISA supports analyzing uploaded project archives through the web dashboard.
+ONGISA also supports analyzing uploaded project archives through the web dashboard.
 
 The current workflow allows a developer to:
 
