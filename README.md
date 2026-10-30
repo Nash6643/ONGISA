@@ -270,7 +270,7 @@ Circular dependencies can make a project harder to understand, test, and modify.
 
 ## 🗑️ Disconnected / Orphan Modules
 
-ONGISA can identify files that appear disconnected from the main application dependency graph.
+ONGISA can also identify files that appear disconnected from the main application dependency graph.
 
 Example:
 
