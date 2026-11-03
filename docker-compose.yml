@@ -1,0 +1,28 @@
+version: '3.8'
+
+services:
+  forge-api:
+    build:
+      context: ./packages/forge-api
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/docs"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    restart: always
+
+  forge-web:
+    build:
+      context: ./apps/forge-web
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      - NEXT_PUBLIC_API_URL=http://localhost:8000
+    depends_on:
+      forge-api:
+        condition: service_healthy
+    restart: always

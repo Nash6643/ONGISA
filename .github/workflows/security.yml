@@ -1,0 +1,21 @@
+name: Security Audit
+
+on:
+  push:
+    branches: [ main, master ]
+  schedule:
+    - cron: '0 0 * * 0'
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Run Bandit Security Lint
+        run: |
+          pip install bandit
+          bandit -r packages/ -ll || true

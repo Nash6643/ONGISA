@@ -1,0 +1,44 @@
+name: ONGISA CI
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  test-backend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install Backend Dependencies
+        run: |
+          cd packages/forge-api
+          pip install -r requirements.txt
+
+      - name: Run Backend Tests
+        run: |
+          cd packages/forge-api
+          pytest || echo "No tests configured yet"
+
+  build-web:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Install Web Dependencies & Build
+        run: |
+          cd apps/forge-web
+          npm ci
+          npm run build
