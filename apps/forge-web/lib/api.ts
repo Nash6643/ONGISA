@@ -49,6 +49,12 @@ export interface SmellItem {
   severity: 'low' | 'medium' | 'high';
 }
 
+export async function fetchHealthScore(): Promise<{ health_score: number }> {
+  const res = await fetch('/api/health');
+  if (!res.ok) throw new Error('Failed to fetch health score');
+  return res.json();
+}
+
 export async function fetchCallGraph(sourceCode: string, filePath: string) {
   const response = await fetch('/api/graph', {
     method: 'POST',
