@@ -30,7 +30,7 @@ class RepositoryData(BaseModel):
     languages: Dict[str, float] = {}
 
 class HealthScoreReport(BaseModel):
-    """Also Represents overall repository health and metric scores."""
+    """Represents overall repository health and metric scores."""
     repository_name: str
     health_score: float
     maintainability_index: float
