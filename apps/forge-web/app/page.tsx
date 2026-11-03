@@ -8,6 +8,7 @@ import { AnalysisResult } from '@/lib/api';
 import RefactorModal from '@/components/RefactorModal';
 import { applyRefactoringPatch } from '@/lib/api';
 import { downloadAnalysisReport } from '@/lib/export';
+import { HealthScoreCard } from '@/components/HealthScoreCard';
 
 export default function Home() {
   const [activeTab, setActiveTab] = useState<
@@ -236,8 +237,7 @@ export default function Home() {
               </h1>
 
               <p className="text-sm text-gray-400 mt-1">
-                ONGISA — Static analysis
-                & symbol tree mapping.
+                ONGISA — Static analysis & symbol tree mapping.
               </p>
             </div>
 
@@ -340,6 +340,11 @@ export default function Home() {
           </div>
 
         </header>
+
+        {/* =========================================================
+            HEALTH SCORE METRIC CARD
+        ========================================================= */}
+        <HealthScoreCard score={92.5} />
 
         {/* =========================================================
             TOPOLOGY TAB
