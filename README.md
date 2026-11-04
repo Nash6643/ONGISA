@@ -24,7 +24,7 @@ Large codebases can become difficult to understand as the number of files, modul
 
 # ✨ What Does ONGISA Do
 
-ONGISA combines several capabilities into one developer platform:
+ONGISA also combines several capabilities into one developer platform:
 
 * 🔎 Static code analysis
 * 📁 Repository structure analysis
