@@ -211,7 +211,7 @@ UserManager.ts
 └── User management
 ```
 
-ONGISA can use structural information such as:
+ONGISA can also use structural information such as:
 
 * File size
 * Symbol count
