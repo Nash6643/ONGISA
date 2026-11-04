@@ -338,7 +338,7 @@ The AI can reason over information such as:
 * Code smells
 * Analysis results
 
-This allows ONGISA to provide **architecture-focused answers grounded in the actual structure and analysis of the project**, helping developers understand how different parts of the codebase are connected and where potential problems exist.
+This also allows ONGISA to provide **architecture-focused answers grounded in the actual structure and analysis of the project**, helping developers understand how different parts of the codebase are connected and where potential problems exist.
 
 # 💬 Architecture AI Assistant
 
